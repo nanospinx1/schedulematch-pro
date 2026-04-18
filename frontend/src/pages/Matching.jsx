@@ -3,6 +3,7 @@ import { api } from '../api';
 import StandardSchedulingModal from '../components/StandardSchedulingModal';
 import PhoneSchedulingModal from '../components/PhoneSchedulingModal';
 import ManualSchedulingModal from '../components/ManualSchedulingModal';
+import AIPhoneIntakeModal from '../components/AIPhoneIntakeModal';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function formatDate(dateStr) {
@@ -28,7 +29,7 @@ const STATUS_LABELS = {
 
 export default function Matching() {
   const [matches, setMatches] = useState([]);
-  const [activeMode, setActiveMode] = useState(null); // 'standard' | 'phone' | 'manual'
+  const [activeMode, setActiveMode] = useState(null); // 'standard' | 'phone' | 'manual' | 'ai-phone'
 
   const loadMatches = () => { api.getMatches().then(setMatches); };
   useEffect(() => { loadMatches(); }, []);
@@ -83,6 +84,16 @@ export default function Matching() {
           <div className="scheduling-mode-title">Calendar View</div>
           <div className="scheduling-mode-desc">Compare client and provider calendars visually. Click overlapping slots to schedule.</div>
         </button>
+        <button className="scheduling-mode-card" onClick={() => setActiveMode('ai-phone')} style={{ borderColor: '#c4b5fd' }}>
+          <svg className="scheduling-mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#7c3aed' }}>
+            <path d="M12 2a5 5 0 015 5v3H7V7a5 5 0 015-5z"/>
+            <path d="M17 10v4a5 5 0 01-10 0v-4"/>
+            <path d="M8 21h8"/>
+            <path d="M12 17v4"/>
+          </svg>
+          <div className="scheduling-mode-title">AI Phone Intake</div>
+          <div className="scheduling-mode-desc">AI-assisted scheduling. Describe client needs in natural language and let the agent find optimal matches.</div>
+        </button>
       </div>
 
       {/* Scheduled sessions */}
@@ -134,6 +145,7 @@ export default function Matching() {
       {activeMode === 'standard' && <StandardSchedulingModal onClose={closeMode} onBooked={loadMatches} />}
       {activeMode === 'phone' && <PhoneSchedulingModal onClose={closeMode} onBooked={loadMatches} />}
       {activeMode === 'manual' && <ManualSchedulingModal onClose={closeMode} onBooked={loadMatches} />}
+      {activeMode === 'ai-phone' && <AIPhoneIntakeModal onClose={closeMode} onBooked={loadMatches} />}
     </div>
   );
 }
