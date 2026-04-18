@@ -91,6 +91,15 @@ export default function Calendar() {
     return results;
   }, [clientData, providerData]);
 
+  const [clientSearch, setClientSearch] = useState('');
+  const [providerSearch, setProviderSearch] = useState('');
+
+  const filteredClients = clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()));
+  const filteredProviders = providers.filter(p =>
+    p.name.toLowerCase().includes(providerSearch.toLowerCase()) ||
+    (p.specialty && p.specialty.toLowerCase().includes(providerSearch.toLowerCase()))
+  );
+
   const hasBoth = !!clientData && !!providerData;
 
   return (
@@ -103,24 +112,40 @@ export default function Calendar() {
       <div className="cal-tab-lists">
         <div className="cal-tab-list">
           <h3>👤 Clients</h3>
+          <input
+            className="cal-tab-search"
+            type="text"
+            placeholder="Search clients..."
+            value={clientSearch}
+            onChange={e => setClientSearch(e.target.value)}
+          />
           <div className="cal-tab-items">
-            {clients.map(c => (
+            {filteredClients.map(c => (
               <button key={c.id} className="cal-tab-item" onClick={() => openClient(c.id)}>
                 <span className="cal-tab-item-name">{c.name}</span>
                 <span className="cal-tab-item-arrow">→</span>
               </button>
             ))}
+            {filteredClients.length === 0 && <p className="cal-tab-empty">No clients found</p>}
           </div>
         </div>
         <div className="cal-tab-list">
           <h3>🏥 Providers</h3>
+          <input
+            className="cal-tab-search"
+            type="text"
+            placeholder="Search providers..."
+            value={providerSearch}
+            onChange={e => setProviderSearch(e.target.value)}
+          />
           <div className="cal-tab-items">
-            {providers.map(p => (
+            {filteredProviders.map(p => (
               <button key={p.id} className="cal-tab-item" onClick={() => openProvider(p.id)}>
                 <span className="cal-tab-item-name">{p.name}{p.specialty ? ` — ${p.specialty}` : ''}</span>
                 <span className="cal-tab-item-arrow">→</span>
               </button>
             ))}
+            {filteredProviders.length === 0 && <p className="cal-tab-empty">No providers found</p>}
           </div>
         </div>
       </div>
