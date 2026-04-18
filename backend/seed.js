@@ -8,7 +8,155 @@ const TZ_MOUNTAIN = 'America/Denver';
 const TZ_CENTRAL = 'America/Chicago';
 const TZ_EASTERN = 'America/New_York';
 
-// --- CLIENTS (15 clients with varied schedules and US timezones) ---
+// --- Seeded random for reproducibility ---
+let _seed = 42;
+function rand() {
+  _seed = (_seed * 16807 + 0) % 2147483647;
+  return (_seed - 1) / 2147483646;
+}
+function randInt(min, max) { return Math.floor(rand() * (max - min + 1)) + min; }
+function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+function chance(p) { return rand() < p; }
+
+// Round to nearest 30 min
+function roundTo30(minutes) { return Math.round(minutes / 30) * 30; }
+function minToTime(m) {
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+// Generate a local date string
+function toLocalDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Get all dates for next N weeks
+function getAllDates(weeksAhead = 9) {
+  const dates = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = 0; i < weeksAhead * 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+// --- Person schedule profiles ---
+// Each person has a "personality" that drives random generation
+// Fields: preferredDays (0=Sun..6=Sat), earlyBird (bool), latePerson (bool),
+//         busyLevel (0.0-1.0), blockCount (1-3 typical), flexDay (chance of random extra day)
+const clientProfiles = [
+  // Sarah (Pacific) - morning person, busy professional, Mon-Fri
+  { preferredDays: [1,2,3,4,5], earlyStart: 7*60, lateStart: 9*60, minBlock: 90, maxBlock: 240, busyChance: 0.85, extraBlockChance: 0.4, skipChance: 0.1, weekendChance: 0.15 },
+  // Michael (Pacific) - afternoon person, flexible
+  { preferredDays: [1,2,3,4,5], earlyStart: 11*60, lateStart: 14*60, minBlock: 60, maxBlock: 210, busyChance: 0.80, extraBlockChance: 0.35, skipChance: 0.12, weekendChance: 0.1 },
+  // Emma (Pacific) - strict mornings, school mom
+  { preferredDays: [1,2,3,4,5], earlyStart: 8*60, lateStart: 9*60+30, minBlock: 120, maxBlock: 300, busyChance: 0.90, extraBlockChance: 0.2, skipChance: 0.08, weekendChance: 0.25 },
+  // James (Mountain) - retired, very flexible, long blocks
+  { preferredDays: [1,2,3,4,5,6], earlyStart: 7*60, lateStart: 10*60, minBlock: 120, maxBlock: 360, busyChance: 0.92, extraBlockChance: 0.55, skipChance: 0.05, weekendChance: 0.6 },
+  // Priya (Mountain) - evening only, limited
+  { preferredDays: [1,2,3,4], earlyStart: 16*60, lateStart: 17*60+30, minBlock: 60, maxBlock: 180, busyChance: 0.78, extraBlockChance: 0.15, skipChance: 0.15, weekendChance: 0.3 },
+  // David (Central) - Tue/Thu focused, some flexibility
+  { preferredDays: [2,4], earlyStart: 9*60, lateStart: 11*60, minBlock: 60, maxBlock: 210, busyChance: 0.88, extraBlockChance: 0.4, skipChance: 0.1, weekendChance: 0.2 },
+  // Lisa (Central) - recovering, limited energy, short blocks
+  { preferredDays: [1,3,5], earlyStart: 9*60, lateStart: 11*60, minBlock: 60, maxBlock: 150, busyChance: 0.75, extraBlockChance: 0.3, skipChance: 0.18, weekendChance: 0.05 },
+  // Robert (Central) - early riser, mornings only
+  { preferredDays: [1,2,3,4,5], earlyStart: 6*60+30, lateStart: 8*60, minBlock: 90, maxBlock: 240, busyChance: 0.82, extraBlockChance: 0.25, skipChance: 0.12, weekendChance: 0.35 },
+  // Amanda (Eastern) - mom, scattered midday blocks
+  { preferredDays: [1,2,3,4,5], earlyStart: 9*60, lateStart: 11*60, minBlock: 60, maxBlock: 180, busyChance: 0.80, extraBlockChance: 0.45, skipChance: 0.15, weekendChance: 0.1 },
+  // Thomas (Eastern) - chronic pain, consistent short mornings + some afternoons
+  { preferredDays: [1,2,3,4,5], earlyStart: 8*60, lateStart: 9*60+30, minBlock: 60, maxBlock: 150, busyChance: 0.90, extraBlockChance: 0.35, skipChance: 0.08, weekendChance: 0.05 },
+  // Jennifer (Eastern) - office worker, afternoons + lunch breaks
+  { preferredDays: [1,2,3,4,5], earlyStart: 12*60, lateStart: 14*60, minBlock: 60, maxBlock: 210, busyChance: 0.85, extraBlockChance: 0.3, skipChance: 0.1, weekendChance: 0.1 },
+  // Carlos (Pacific) - night shift, early mornings only
+  { preferredDays: [1,2,3,4,5], earlyStart: 6*60, lateStart: 7*60+30, minBlock: 90, maxBlock: 240, busyChance: 0.82, extraBlockChance: 0.2, skipChance: 0.12, weekendChance: 0.25 },
+  // Rachel (Pacific) - anxiety, prefers routine, very consistent
+  { preferredDays: [1,3,5], earlyStart: 8*60, lateStart: 9*60, minBlock: 120, maxBlock: 300, busyChance: 0.92, extraBlockChance: 0.5, skipChance: 0.05, weekendChance: 0.15 },
+  // William (Eastern) - post-stroke, frequent short sessions
+  { preferredDays: [1,2,3,4,5], earlyStart: 7*60+30, lateStart: 9*60, minBlock: 60, maxBlock: 180, busyChance: 0.88, extraBlockChance: 0.4, skipChance: 0.08, weekendChance: 0.1 },
+  // Maria (Central) - Wed/Fri focused, occasional Monday
+  { preferredDays: [3,5], earlyStart: 8*60, lateStart: 10*60, minBlock: 120, maxBlock: 300, busyChance: 0.88, extraBlockChance: 0.45, skipChance: 0.08, weekendChance: 0.1 },
+];
+
+const providerProfiles = [
+  // Dr. Watson (Pacific) - Mon-Thu heavy, Fri light
+  { preferredDays: [1,2,3,4], earlyStart: 7*60+30, lateStart: 9*60, minBlock: 120, maxBlock: 300, busyChance: 0.92, extraBlockChance: 0.6, skipChance: 0.05, weekendChance: 0.05, friChance: 0.7 },
+  // Dr. Rivera (Pacific) - Mon/Wed/Fri + occasional Sat
+  { preferredDays: [1,3,5], earlyStart: 8*60, lateStart: 9*60+30, minBlock: 120, maxBlock: 270, busyChance: 0.88, extraBlockChance: 0.5, skipChance: 0.08, weekendChance: 0.4 },
+  // Nurse Brooks (Mountain) - Tue-Fri, early bird
+  { preferredDays: [2,3,4,5], earlyStart: 6*60+30, lateStart: 8*60, minBlock: 120, maxBlock: 300, busyChance: 0.90, extraBlockChance: 0.5, skipChance: 0.07, weekendChance: 0.35 },
+  // Dr. Park (Central) - Mon-Fri, mornings dominant
+  { preferredDays: [1,2,3,4,5], earlyStart: 7*60+30, lateStart: 9*60, minBlock: 90, maxBlock: 240, busyChance: 0.88, extraBlockChance: 0.4, skipChance: 0.08, weekendChance: 0.05 },
+  // Jessica Nguyen (Pacific) - afternoons mostly, Wed all day
+  { preferredDays: [1,2,3,4,5], earlyStart: 12*60, lateStart: 14*60, minBlock: 90, maxBlock: 240, busyChance: 0.85, extraBlockChance: 0.4, skipChance: 0.1, weekendChance: 0.1 },
+  // Mark Sullivan (Central) - Tue-Thu main, Mon afternoon sometimes
+  { preferredDays: [2,3,4], earlyStart: 8*60, lateStart: 10*60, minBlock: 90, maxBlock: 270, busyChance: 0.88, extraBlockChance: 0.5, skipChance: 0.08, weekendChance: 0.05 },
+  // Dr. Khan (Eastern) - afternoon/evening specialist
+  { preferredDays: [1,2,3,4], earlyStart: 13*60, lateStart: 15*60, minBlock: 90, maxBlock: 270, busyChance: 0.85, extraBlockChance: 0.45, skipChance: 0.1, weekendChance: 0.15 },
+  // Patricia Morales (Central) - Mon-Fri early, very consistent
+  { preferredDays: [1,2,3,4,5], earlyStart: 6*60, lateStart: 7*60+30, minBlock: 120, maxBlock: 300, busyChance: 0.90, extraBlockChance: 0.45, skipChance: 0.07, weekendChance: 0.3 },
+  // Daniel Foster (Eastern) - early mornings Mon-Fri
+  { preferredDays: [1,2,3,4,5], earlyStart: 6*60, lateStart: 7*60, minBlock: 90, maxBlock: 270, busyChance: 0.88, extraBlockChance: 0.35, skipChance: 0.08, weekendChance: 0.1 },
+  // Dr. Kim (Mountain) - Wed/Fri heavy, Mon light
+  { preferredDays: [3,5], earlyStart: 8*60, lateStart: 10*60, minBlock: 120, maxBlock: 300, busyChance: 0.90, extraBlockChance: 0.55, skipChance: 0.06, weekendChance: 0.25 },
+];
+
+// Generate randomized availability blocks for one person across all dates
+function generateAvailability(profile, allDates) {
+  const slots = [];
+  for (const date of allDates) {
+    const dow = date.getDay();
+    const dateStr = toLocalDateStr(date);
+
+    // Is this a preferred day?
+    const isPreferred = profile.preferredDays.includes(dow);
+    const isWeekend = dow === 0 || dow === 6;
+
+    // Decide if they're available this day
+    let available = false;
+    if (isPreferred) {
+      available = !chance(profile.skipChance); // usually available on preferred days
+    } else if (isWeekend && !isPreferred) {
+      available = chance(profile.weekendChance);
+    } else {
+      // Not preferred weekday — occasional extra day
+      available = chance(0.2);
+    }
+
+    if (!available) continue;
+
+    // Generate 1-3 blocks for this day
+    const numBlocks = chance(profile.extraBlockChance) ? (chance(0.3) ? 3 : 2) : 1;
+    let cursor = roundTo30(randInt(profile.earlyStart, profile.lateStart));
+
+    for (let b = 0; b < numBlocks; b++) {
+      // Jitter the start time a bit
+      const jitter = roundTo30(randInt(-30, 30));
+      let start = Math.max(0, cursor + jitter);
+      start = roundTo30(start);
+
+      // Block duration varies
+      const duration = roundTo30(randInt(profile.minBlock, profile.maxBlock));
+      let end = Math.min(22 * 60, start + duration); // cap at 10pm
+      end = roundTo30(end);
+
+      if (end <= start) break;
+
+      slots.push({ date: dateStr, start_time: minToTime(start), end_time: minToTime(end) });
+
+      // Gap before next block: 30-90 min lunch/break
+      cursor = end + roundTo30(randInt(30, 90));
+      if (cursor >= 21 * 60) break;
+    }
+  }
+  return slots;
+}
 const clients = [
   { name: 'Sarah Johnson', email: 'sarah.j@email.com', phone: '555-0101', address: '123 Oak St, Seattle, WA', timezone: TZ_PACIFIC, notes: 'Prefers mornings, needs wheelchair access' },
   { name: 'Michael Chen', email: 'mchen@email.com', phone: '555-0102', address: '456 Pine Ave, Bellevue, WA', timezone: TZ_PACIFIC, notes: 'Works from home, flexible afternoons' },
@@ -27,83 +175,7 @@ const clients = [
   { name: 'Maria Santos', email: 'msantos@email.com', phone: '555-0115', address: '396 Hemlock Way, Austin, TX', timezone: TZ_CENTRAL, notes: 'Portuguese speaker, Wed/Fri only' },
 ];
 
-// Helper: generate dates for the next N weeks for specific weekdays (local dates)
-function datesForWeekdays(weekdays, weeksAhead = 8) {
-  const dates = [];
-  const today = new Date();
-  for (let w = 0; w < weeksAhead; w++) {
-    for (const wd of weekdays) {
-      const d = new Date(today);
-      const diff = (wd - today.getDay() + 7) % 7 + w * 7;
-      d.setDate(today.getDate() + diff);
-      if (d >= today) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        dates.push(`${y}-${m}-${day}`);
-      }
-    }
-  }
-  return [...new Set(dates)].sort();
-}
-
-// Client availability: dense, realistic schedules over next 8 weeks
-// Multiple blocks per day for busier schedules
-const clientAvailability = [
-  // Sarah (Pacific) - busy mornings + some afternoons Mon-Fri
-  { idx: 0, weekdays: [1,2,3,4,5], start: '08:00', end: '12:00' },
-  { idx: 0, weekdays: [1,3,5], start: '13:00', end: '15:00' },
-  // Michael (Pacific) - afternoons Mon-Fri, mornings on Wed
-  { idx: 1, weekdays: [1,2,3,4,5], start: '13:00', end: '17:00' },
-  { idx: 1, weekdays: [3], start: '09:00', end: '12:00' },
-  // Emma (Pacific) - mornings Mon-Fri + Saturday morning
-  { idx: 2, weekdays: [1,2,3,4,5], start: '08:30', end: '14:30' },
-  { idx: 2, weekdays: [6], start: '09:00', end: '12:00' },
-  // James (Mountain) - very flexible Mon-Sat, busy all day
-  { idx: 3, weekdays: [1,2,3,4,5], start: '07:00', end: '12:00' },
-  { idx: 3, weekdays: [1,2,3,4,5], start: '13:00', end: '18:00' },
-  { idx: 3, weekdays: [6], start: '09:00', end: '14:00' },
-  // Priya (Mountain) - evenings Mon-Fri + Sat afternoon
-  { idx: 4, weekdays: [1,2,3,4,5], start: '16:00', end: '20:00' },
-  { idx: 4, weekdays: [6], start: '13:00', end: '17:00' },
-  // David (Central) - Tue/Thu/Sat blocks
-  { idx: 5, weekdays: [2,4], start: '09:00', end: '12:00' },
-  { idx: 5, weekdays: [2,4], start: '13:00', end: '16:00' },
-  { idx: 5, weekdays: [6], start: '10:00', end: '14:00' },
-  // Lisa (Central) - Mon/Wed/Fri mornings + Tue/Thu afternoons
-  { idx: 6, weekdays: [1,3,5], start: '09:00', end: '12:30' },
-  { idx: 6, weekdays: [2,4], start: '13:00', end: '16:00' },
-  // Robert (Central) - Mon-Fri early mornings + Sat
-  { idx: 7, weekdays: [1,2,3,4,5], start: '07:00', end: '11:00' },
-  { idx: 7, weekdays: [1,3], start: '14:00', end: '16:00' },
-  { idx: 7, weekdays: [6], start: '08:00', end: '12:00' },
-  // Amanda (Eastern) - Tue/Wed/Thu midday + Mon/Fri mornings
-  { idx: 8, weekdays: [2,3,4], start: '10:00', end: '14:00' },
-  { idx: 8, weekdays: [1,5], start: '08:00', end: '11:00' },
-  { idx: 8, weekdays: [2,4], start: '15:00', end: '17:00' },
-  // Thomas (Eastern) - weekday mornings + afternoons Mon/Wed
-  { idx: 9, weekdays: [1,2,3,4,5], start: '08:00', end: '11:30' },
-  { idx: 9, weekdays: [1,3], start: '13:00', end: '15:30' },
-  // Jennifer (Eastern) - Mon-Fri afternoon + Wed morning
-  { idx: 10, weekdays: [1,2,3,4,5], start: '13:00', end: '17:00' },
-  { idx: 10, weekdays: [3], start: '09:00', end: '12:00' },
-  // Carlos (Pacific) - mornings Mon-Fri + Sat early
-  { idx: 11, weekdays: [1,2,3,4,5], start: '06:00', end: '11:00' },
-  { idx: 11, weekdays: [6], start: '07:00', end: '10:00' },
-  // Rachel (Pacific) - Mon/Wed/Fri all day + Tue/Thu afternoon
-  { idx: 12, weekdays: [1,3,5], start: '08:00', end: '12:00' },
-  { idx: 12, weekdays: [1,3,5], start: '13:00', end: '17:00' },
-  { idx: 12, weekdays: [2,4], start: '14:00', end: '18:00' },
-  // William (Eastern) - Mon-Fri mornings + Tue/Thu afternoon
-  { idx: 13, weekdays: [1,2,3,4,5], start: '07:30', end: '12:00' },
-  { idx: 13, weekdays: [2,4], start: '13:00', end: '15:30' },
-  // Maria (Central) - Wed/Fri all day + Mon morning
-  { idx: 14, weekdays: [3,5], start: '08:00', end: '12:00' },
-  { idx: 14, weekdays: [3,5], start: '13:00', end: '17:00' },
-  { idx: 14, weekdays: [1], start: '09:00', end: '12:00' },
-];
-
-// --- PROVIDERS (10 providers with US timezones matching client regions) ---
+// --- PROVIDERS (10 providers with US timezones) ---
 const providers = [
   { name: 'Dr. Emily Watson', email: 'ewatson@clinic.com', phone: '555-0201', address: '100 Medical Plaza, Seattle, WA', specialty: 'Physical Therapy', timezone: TZ_PACIFIC, notes: 'Board certified, 15 years experience' },
   { name: 'Dr. Alex Rivera', email: 'arivera@clinic.com', phone: '555-0202', address: '200 Health Center, Portland, OR', specialty: 'Occupational Therapy', timezone: TZ_PACIFIC, notes: 'Specializes in stroke recovery' },
@@ -117,52 +189,10 @@ const providers = [
   { name: 'Dr. Rachel Kim', email: 'rkim@psych.com', phone: '555-0210', address: '1000 Balance Rd, Phoenix, AZ', specialty: 'Mental Health Counseling', timezone: TZ_MOUNTAIN, notes: 'Specializes in anxiety and chronic pain' },
 ];
 
-// Provider availability: dense schedules over next 8 weeks with overlaps
-const providerAvailability = [
-  // Dr. Watson (Pacific) - Mon-Thu full day + Fri morning — overlaps Sarah, Michael, Emma, Carlos, Rachel
-  { idx: 0, weekdays: [1,2,3,4], start: '08:00', end: '12:00' },
-  { idx: 0, weekdays: [1,2,3,4], start: '13:00', end: '17:00' },
-  { idx: 0, weekdays: [5], start: '08:00', end: '13:00' },
-  // Dr. Rivera (Pacific) - Mon/Wed/Fri + Sat — overlaps Sarah, Emma, Rachel
-  { idx: 1, weekdays: [1,3,5], start: '08:00', end: '12:30' },
-  { idx: 1, weekdays: [1,3,5], start: '13:30', end: '17:00' },
-  { idx: 1, weekdays: [6], start: '09:00', end: '14:00' },
-  // Nurse Brooks (Mountain) - Tue-Sat — overlaps James, Priya
-  { idx: 2, weekdays: [2,3,4,5], start: '07:00', end: '12:00' },
-  { idx: 2, weekdays: [2,3,4,5], start: '13:00', end: '16:00' },
-  { idx: 2, weekdays: [6], start: '08:00', end: '14:00' },
-  // Dr. Park (Central) - Mon-Fri — overlaps David, Lisa, Robert, Maria
-  { idx: 3, weekdays: [1,2,3,4,5], start: '08:00', end: '12:00' },
-  { idx: 3, weekdays: [1,3,5], start: '13:00', end: '16:00' },
-  // Jessica Nguyen (Pacific) - Mon-Thu afternoon + Wed all day — overlaps Michael, Rachel
-  { idx: 4, weekdays: [1,2,4], start: '13:00', end: '18:00' },
-  { idx: 4, weekdays: [3], start: '08:00', end: '12:00' },
-  { idx: 4, weekdays: [3], start: '13:00', end: '18:00' },
-  { idx: 4, weekdays: [5], start: '09:00', end: '14:00' },
-  // Mark Sullivan (Central) - Tue-Thu + Mon afternoon — overlaps David, Lisa, Robert, Maria
-  { idx: 5, weekdays: [2,3,4], start: '08:30', end: '12:00' },
-  { idx: 5, weekdays: [2,3,4], start: '13:00', end: '17:00' },
-  { idx: 5, weekdays: [1], start: '13:00', end: '17:00' },
-  // Dr. Khan (Eastern) - Mon-Thu evenings + Wed afternoon — overlaps Amanda, Thomas, Jennifer, William
-  { idx: 6, weekdays: [1,2,3,4], start: '14:00', end: '17:00' },
-  { idx: 6, weekdays: [1,2,3,4], start: '17:00', end: '21:00' },
-  { idx: 6, weekdays: [5], start: '13:00', end: '18:00' },
-  // Patricia Morales (Central) - Mon-Fri early + Sat — overlaps Robert, Lisa, Maria
-  { idx: 7, weekdays: [1,2,3,4,5], start: '06:00', end: '11:00' },
-  { idx: 7, weekdays: [1,2,3,4,5], start: '12:00', end: '15:00' },
-  { idx: 7, weekdays: [6], start: '08:00', end: '12:00' },
-  // Daniel Foster (Eastern) - Mon-Fri mornings + Tue/Thu afternoon — overlaps Thomas, Jennifer, William, Amanda
-  { idx: 8, weekdays: [1,2,3,4,5], start: '06:00', end: '12:00' },
-  { idx: 8, weekdays: [2,4], start: '13:00', end: '16:00' },
-  // Dr. Kim (Mountain) - Mon afternoon, Wed/Fri all day + Sat — overlaps James, Priya
-  { idx: 9, weekdays: [1], start: '13:00', end: '18:00' },
-  { idx: 9, weekdays: [3,5], start: '08:00', end: '12:00' },
-  { idx: 9, weekdays: [3,5], start: '13:00', end: '18:00' },
-  { idx: 9, weekdays: [6], start: '10:00', end: '15:00' },
-];
-
 // --- SEED ---
 console.log('Seeding demo data...');
+
+const allDates = getAllDates(9); // ~9 weeks of dates
 
 const insertClient = db.prepare('INSERT INTO clients (user_id, name, email, phone, address, notes, timezone) VALUES (?, ?, ?, ?, ?, ?, ?)');
 const insertClientAvail = db.prepare('INSERT INTO client_availability (client_id, date, start_time, end_time) VALUES (?, ?, ?, ?)');
@@ -181,34 +211,36 @@ const seedAll = db.transaction(() => {
   db.exec('DELETE FROM clients');
   db.exec('DELETE FROM preferences');
 
-  // Insert clients
+  // Insert clients with randomized availability
   const clientIds = [];
-  for (const c of clients) {
+  let totalClientSlots = 0;
+  for (let i = 0; i < clients.length; i++) {
+    const c = clients[i];
     const r = insertClient.run(USER_ID, c.name, c.email, c.phone, c.address, c.notes, c.timezone);
-    clientIds.push(r.lastInsertRowid);
-  }
+    const cid = r.lastInsertRowid;
+    clientIds.push(cid);
 
-  // Insert client availability (date-based, 8 weeks)
-  for (const ca of clientAvailability) {
-    const dates = datesForWeekdays(ca.weekdays, 8);
-    for (const date of dates) {
-      insertClientAvail.run(clientIds[ca.idx], date, ca.start, ca.end);
+    const slots = generateAvailability(clientProfiles[i], allDates);
+    for (const slot of slots) {
+      insertClientAvail.run(cid, slot.date, slot.start_time, slot.end_time);
     }
+    totalClientSlots += slots.length;
   }
 
-  // Insert providers
+  // Insert providers with randomized availability
   const providerIds = [];
-  for (const p of providers) {
+  let totalProviderSlots = 0;
+  for (let i = 0; i < providers.length; i++) {
+    const p = providers[i];
     const r = insertProvider.run(USER_ID, p.name, p.email, p.phone, p.address, p.specialty, p.notes, p.timezone);
-    providerIds.push(r.lastInsertRowid);
-  }
+    const pid = r.lastInsertRowid;
+    providerIds.push(pid);
 
-  // Insert provider availability (date-based, 8 weeks)
-  for (const pa of providerAvailability) {
-    const dates = datesForWeekdays(pa.weekdays, 8);
-    for (const date of dates) {
-      insertProviderAvail.run(providerIds[pa.idx], date, pa.start, pa.end);
+    const slots = generateAvailability(providerProfiles[i], allDates);
+    for (const slot of slots) {
+      insertProviderAvail.run(pid, slot.date, slot.start_time, slot.end_time);
     }
+    totalProviderSlots += slots.length;
   }
 
   // Create some existing scheduled sessions (past + upcoming)
@@ -260,7 +292,7 @@ const seedAll = db.transaction(() => {
   insertPref.run(USER_ID, 'Send confirmation email 24 hours before appointment');
   insertPref.run(USER_ID, 'Buffer 30 minutes between provider appointments');
 
-  console.log(`✅ Seeded: ${clientIds.length} clients, ${providerIds.length} providers, ${matchIds.length} sessions, ${comms.length} communications`);
+  console.log(`✅ Seeded: ${clientIds.length} clients (${totalClientSlots} slots), ${providerIds.length} providers (${totalProviderSlots} slots), ${matchIds.length} sessions, ${comms.length} communications`);
 });
 
 seedAll();
