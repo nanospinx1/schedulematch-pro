@@ -130,6 +130,7 @@ export default function CalendarAvailability({
   const pickerRef = useRef(null);
   const gridWrapperRef = useRef(null);
   const [editingNote, setEditingNote] = useState(null); // { idx, isOverlay, note }
+  const [hoveredSlot, setHoveredSlot] = useState(null); // { x, y, startTime, endTime, note }
 
   // Auto-scroll to 8 AM on mount (offset by header height so 8 AM is visible)
   useEffect(() => {
@@ -577,14 +578,14 @@ export default function CalendarAvailability({
                     }}
                     onClick={() => {}}
                     onDoubleClick={() => handleSlotClick(slot._idx, false)}
+                    onMouseEnter={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setHoveredSlot({ x: r.left + r.width / 2, y: r.top, startTime: slot.start_time, endTime: slot.end_time, note: slot.note });
+                    }}
+                    onMouseLeave={() => setHoveredSlot(null)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
                     {slot.note && <span className="cal-slot-note-text">{slot.note}</span>}
-                    <div className="cal-slot-tooltip">
-                      <div>{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</div>
-                      {slot.note && <div className="cal-slot-tooltip-note">📝 {slot.note}</div>}
-                      <div className="cal-slot-tooltip-hint">Double-click to {slot.note ? 'edit' : 'add'} note</div>
-                    </div>
                     <button
                       type="button"
                       className="cal-slot-delete"
@@ -612,14 +613,14 @@ export default function CalendarAvailability({
                     style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
                     onClick={() => {}}
                     onDoubleClick={() => handleSlotClick(slot._oidx, true)}
+                    onMouseEnter={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setHoveredSlot({ x: r.left + r.width / 2, y: r.top, startTime: slot.start_time, endTime: slot.end_time, note: slot.note });
+                    }}
+                    onMouseLeave={() => setHoveredSlot(null)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
                     {slot.note && <span className="cal-slot-note-text">{slot.note}</span>}
-                    <div className="cal-slot-tooltip">
-                      <div>{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</div>
-                      {slot.note && <div className="cal-slot-tooltip-note">📝 {slot.note}</div>}
-                      <div className="cal-slot-tooltip-hint">Double-click to {slot.note ? 'edit' : 'add'} note</div>
-                    </div>
                     {onOverlayChange && (
                       <button
                         type="button"
@@ -649,6 +650,15 @@ export default function CalendarAvailability({
           </div>
         </div>
       ))}
+
+      {/* Hover tooltip (fixed position, escapes overflow) */}
+      {hoveredSlot && (
+        <div className="cal-slot-tooltip" style={{ left: hoveredSlot.x, top: hoveredSlot.y }}>
+          <div className="cal-slot-tooltip-time">{formatTime12(hoveredSlot.startTime)} – {formatTime12(hoveredSlot.endTime)}</div>
+          {hoveredSlot.note && <div className="cal-slot-tooltip-note">📝 {hoveredSlot.note}</div>}
+          <div className="cal-slot-tooltip-hint">Double-click to {hoveredSlot.note ? 'edit' : 'add'} note</div>
+        </div>
+      )}
 
       {/* Note editing popup */}
       {editingNote && (

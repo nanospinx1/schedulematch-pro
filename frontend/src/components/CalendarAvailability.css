@@ -658,18 +658,14 @@
 
 /* Custom hover tooltip */
 .cal-slot-tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
+  transform: translateX(-50%) translateY(-100%) translateY(-8px);
   background: #252423;
   color: white;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: 6px;
   font-size: 12px;
-  white-space: nowrap;
-  z-index: 100;
+  z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   pointer-events: none;
 }
@@ -684,15 +680,17 @@
   border-top-color: #252423;
 }
 
-.cal-slot:hover .cal-slot-tooltip {
-  display: block;
+.cal-slot-tooltip-time {
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .cal-slot-tooltip-note {
   margin-top: 4px;
-  color: #c8c6c4;
+  color: #e8e6e3;
   white-space: normal;
-  max-width: 220px;
+  max-width: 240px;
+  line-height: 1.4;
 }
 
 .cal-slot-tooltip-hint {
