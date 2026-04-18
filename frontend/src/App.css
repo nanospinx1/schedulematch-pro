@@ -638,7 +638,7 @@ tr:hover td { background: var(--gray-50); }
 .cal-merged-legend {
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   font-size: 12px;
   font-weight: 600;
 }
