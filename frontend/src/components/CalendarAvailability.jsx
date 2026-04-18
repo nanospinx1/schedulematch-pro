@@ -308,10 +308,12 @@ export default function CalendarAvailability({ availability, onChange }) {
                       const isCurrentMonth = day.getMonth() === pickerMonth.getMonth();
                       const dayStr = toDateStr(day);
                       const isToday = dayStr === todayStr;
+                      const isFirst = di === 0;
+                      const isLast = di === 6;
                       return (
                         <div
                           key={`${wi}-${di}`}
-                          className={`cal-picker-mini-day${!isCurrentMonth ? ' cal-picker-dim' : ''}${isToday ? ' cal-picker-today' : ''}${isSelectedWeek ? ' cal-picker-sel-week' : ''}${isHoverWeek && !isSelectedWeek ? ' cal-picker-hover-week' : ''}`}
+                          className={`cal-picker-mini-day${!isCurrentMonth ? ' cal-picker-dim' : ''}${isToday ? ' cal-picker-today' : ''}${isSelectedWeek ? ' cal-picker-sel-week' : ''}${isHoverWeek && !isSelectedWeek ? ' cal-picker-hover-week' : ''}${isFirst ? ' cal-picker-week-first' : ''}${isLast ? ' cal-picker-week-last' : ''}`}
                           onClick={() => handlePickerWeekClick(week)}
                           onMouseEnter={() => setPickerHoverWeek(wi)}
                           onMouseLeave={() => setPickerHoverWeek(-1)}

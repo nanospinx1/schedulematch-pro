@@ -202,17 +202,8 @@
   font-size: 13px;
   padding: 5px 0;
   cursor: pointer;
-  border-radius: 4px;
   color: var(--gray-700);
   transition: background 0.1s;
-}
-
-.cal-picker-mini-day:hover {
-  background: none;
-}
-
-.cal-picker-hover-week {
-  background: var(--gray-100);
 }
 
 .cal-picker-dim {
@@ -230,10 +221,33 @@
   background: var(--primary-hover);
 }
 
+.cal-picker-hover-week,
+.cal-picker-hover-week.cal-picker-dim {
+  background: var(--gray-100);
+  border-radius: 0;
+}
+
 .cal-picker-sel-week {
-  outline: 2px solid var(--primary);
-  outline-offset: -1px;
-  border-radius: 4px;
+  background: rgba(79, 70, 229, 0.12);
+  border-radius: 0;
+}
+
+/* Smooth band: round only the first and last day of each week row */
+.cal-picker-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  text-align: center;
+}
+
+/* Smooth band: round only the first and last day of each week row */
+.cal-picker-week-first.cal-picker-hover-week,
+.cal-picker-week-first.cal-picker-sel-week {
+  border-radius: 16px 0 0 16px;
+}
+
+.cal-picker-week-last.cal-picker-hover-week,
+.cal-picker-week-last.cal-picker-sel-week {
+  border-radius: 0 16px 16px 0;
 }
 
 .cal-picker-right {
