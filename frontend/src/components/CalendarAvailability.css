@@ -523,9 +523,26 @@
   background: rgba(5, 150, 105, 0.1) !important;
 }
 
-/* Merged mode: subtle split indicator on cell hover */
-.cal-merged .cal-cell:hover {
-  background: linear-gradient(to right, rgba(98, 100, 167, 0.06) 50%, rgba(5, 150, 105, 0.06) 50%) !important;
+/* Merged mode: split cells into left/right halves */
+.cal-cell-split {
+  display: flex;
+  padding: 0;
+}
+.cal-half {
+  flex: 1;
+  min-height: 100%;
+}
+.cal-half-left:hover {
+  background: rgba(98, 100, 167, 0.10);
+}
+.cal-half-right:hover {
+  background: rgba(5, 150, 105, 0.10);
+}
+.cal-half-drag {
+  background: rgba(98, 100, 167, 0.15) !important;
+}
+.cal-half-drag-overlay {
+  background: rgba(5, 150, 105, 0.15) !important;
 }
 
 .cal-cell-offhours {

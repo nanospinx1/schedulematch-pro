@@ -320,8 +320,8 @@ export default function CalendarAvailability({
     return (e.clientX - rect.left) > rect.width / 2;
   };
 
-  const handleMouseDown = (dayIdx, row, e) => {
-    const targetOverlay = isRightHalf(e);
+  const handleMouseDown = (dayIdx, row, e, forceOverlay) => {
+    const targetOverlay = forceOverlay !== undefined ? forceOverlay : isRightHalf(e);
     setDragging({ dayIdx, startRow: row, currentRow: row, targetOverlay });
   };
 
@@ -366,7 +366,7 @@ export default function CalendarAvailability({
     setDragging(null);
   };
 
-  const handleDoubleClick = (dayIdx, row, e) => {
+  const handleDoubleClick = (dayIdx, row, e, forceOverlay) => {
     let date;
     if (viewMode === 'day') {
       date = toDateStr(selectedDate);
@@ -385,7 +385,7 @@ export default function CalendarAvailability({
       storeDate = toDateStr(d);
     }
     const newSlot = { date: storeDate, start_time: startStore.time, end_time: endStore.time };
-    const targetOverlay = isRightHalf(e);
+    const targetOverlay = forceOverlay !== undefined ? forceOverlay : isRightHalf(e);
     if (targetOverlay && onOverlayChange) {
       onOverlayChange([...overlaySlots, newSlot]);
     } else {
@@ -470,7 +470,7 @@ export default function CalendarAvailability({
   }, [gridDates, todayStr, now, viewMode, tzOffsetMin]);
 
   return (
-    <div className={`cal-container${overlaySlots ? ' cal-merged' : ''}`} onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
+    <div className="cal-container" onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
       {!hideToolbar && (
       <div className="cal-toolbar">
         <div className="cal-toolbar-row">
@@ -648,10 +648,35 @@ export default function CalendarAvailability({
                   const isHighlight = dragging && dragging.dayIdx === dayIdx &&
                     row >= Math.min(dragging.startRow, dragging.currentRow) &&
                     row <= Math.max(dragging.startRow, dragging.currentRow);
-                  const dragClass = isHighlight ? (dragging.targetOverlay ? 'cal-cell-drag-overlay' : 'cal-cell-drag') : '';
                   const dayOfWeek = d.getDay();
                   const isOffHours = hour < 8 || hour >= 18 || dayOfWeek === 0 || dayOfWeek === 6;
+                  const hasMergedView = !!overlaySlots;
 
+                  if (hasMergedView) {
+                    const dragClassL = isHighlight && !dragging.targetOverlay ? 'cal-half-drag' : '';
+                    const dragClassR = isHighlight && dragging.targetOverlay ? 'cal-half-drag-overlay' : '';
+                    return (
+                      <div
+                        key={`c-${row}-${dayIdx}`}
+                        className={`cal-cell cal-cell-split ${isHourStart ? 'cal-cell-hour' : ''}${isOffHours ? ' cal-cell-offhours' : ''}`}
+                        style={{ gridColumn: dayIdx + 2, gridRow: row + 2 }}
+                        onMouseEnter={() => handleMouseEnter(dayIdx, row)}
+                      >
+                        <div
+                          className={`cal-half cal-half-left ${dragClassL}`}
+                          onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row, e, false); }}
+                          onDoubleClick={(e) => handleDoubleClick(dayIdx, row, e, false)}
+                        />
+                        <div
+                          className={`cal-half cal-half-right ${dragClassR}`}
+                          onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row, e, true); }}
+                          onDoubleClick={(e) => handleDoubleClick(dayIdx, row, e, true)}
+                        />
+                      </div>
+                    );
+                  }
+
+                  const dragClass = isHighlight ? 'cal-cell-drag' : '';
                   return (
                     <div
                       key={`c-${row}-${dayIdx}`}
