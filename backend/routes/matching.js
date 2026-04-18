@@ -233,6 +233,173 @@ router.post('/realtime-suggest', (req, res) => {
   res.json({ suggestions: results });
 });
 
+// --- Smart Recurring Schedule Suggestion ---
+// Analyzes overlapping availability across weeks to find the best recurring pattern
+router.post('/recurring/smart-suggest', (req, res) => {
+  const { client_id, provider_id, cadence, desired_duration, num_weeks, start_date } = req.body;
+  if (!client_id || !provider_id || !cadence || !desired_duration || !num_weeks || !start_date) {
+    return res.status(400).json({ error: 'All fields required: client_id, provider_id, cadence, desired_duration, num_weeks, start_date' });
+  }
+
+  const client = db.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').get(client_id, req.user.id);
+  const provider = db.prepare('SELECT * FROM providers WHERE id = ? AND user_id = ?').get(provider_id, req.user.id);
+  if (!client || !provider) return res.status(404).json({ error: 'Client or provider not found' });
+
+  const clientTzOffset = getUtcOffsetMinutes(client.timezone || 'America/New_York');
+  const providerTzOffset = getUtcOffsetMinutes(provider.timezone || 'America/New_York');
+
+  // Generate target dates
+  const targetDates = [];
+  const d = new Date(start_date + 'T12:00:00');
+  const step = cadence === 'biweekly' ? 14 : 7;
+  for (let i = 0; i < num_weeks; i++) {
+    targetDates.push(d.toISOString().split('T')[0]);
+    d.setDate(d.getDate() + step);
+  }
+
+  // Load all availability and booked ranges
+  const clientSlots = db.prepare('SELECT * FROM client_availability WHERE client_id = ? ORDER BY date, start_time').all(client.id);
+  const providerSlots = db.prepare('SELECT * FROM provider_availability WHERE provider_id = ? ORDER BY date, start_time').all(provider.id);
+  const clientBooked = getBookedRanges(req.user.id, 'client', client.id, targetDates[0]);
+  const providerBooked = getBookedRanges(req.user.id, 'provider', provider.id, targetDates[0]);
+
+  // For each target date, compute all free overlap segments
+  const dateOverlaps = {};
+  for (const date of targetDates) {
+    const cSlots = clientSlots.filter(s => s.date === date);
+    const pSlots = providerSlots.filter(s => s.date === date);
+    const segments = [];
+
+    for (const cs of cSlots) {
+      for (const ps of pSlots) {
+        const csStart = toUtcMinutes(cs.start_time, clientTzOffset);
+        const csEnd = toUtcMinutes(cs.end_time, clientTzOffset);
+        const psStart = toUtcMinutes(ps.start_time, providerTzOffset);
+        const psEnd = toUtcMinutes(ps.end_time, providerTzOffset);
+        const overlapStart = Math.max(csStart, psStart);
+        const overlapEnd = Math.min(csEnd, psEnd);
+        if (overlapEnd - overlapStart < desired_duration) continue;
+
+        const bookedOnDate = [
+          ...clientBooked.filter(b => b.date === date),
+          ...providerBooked.filter(b => b.date === date)
+        ];
+        const free = subtractBooked(overlapStart, overlapEnd, bookedOnDate);
+        for (const seg of free) {
+          if (seg.end - seg.start >= desired_duration) {
+            segments.push({ startUtc: seg.start, endUtc: seg.end });
+          }
+        }
+      }
+    }
+    dateOverlaps[date] = segments;
+  }
+
+  // Find the anchor time: the start time (in 15-min buckets) that fits the most weeks
+  // Use provider local time for bucketing
+  const timeBuckets = {}; // bucket -> [dates that have this bucket available]
+  for (const date of targetDates) {
+    for (const seg of (dateOverlaps[date] || [])) {
+      // Generate all possible start times within this segment at 15-min intervals
+      for (let t = seg.startUtc; t + desired_duration <= seg.endUtc; t += 15) {
+        const localStart = t + providerTzOffset;
+        const bucket = minutesToTime(localStart);
+        if (!timeBuckets[bucket]) timeBuckets[bucket] = [];
+        timeBuckets[bucket].push(date);
+      }
+    }
+  }
+
+  // Rank buckets by coverage (how many weeks) then by time stability
+  const bucketRanked = Object.entries(timeBuckets)
+    .map(([time, dates]) => ({ time, dates, coverage: dates.length }))
+    .sort((a, b) => b.coverage - a.coverage || a.time.localeCompare(b.time));
+
+  if (bucketRanked.length === 0) {
+    return res.json({
+      anchor: null,
+      summary: { total: targetDates.length, confirmed: 0, adjusted_time: 0, unavailable: targetDates.length },
+      occurrences: targetDates.map(date => ({ date, status: 'unavailable', reason: 'No overlapping availability' }))
+    });
+  }
+
+  const anchorTime = bucketRanked[0].time;
+  const anchorEndTime = minutesToTime(timeToMinutes(anchorTime) + desired_duration);
+  const anchorDates = new Set(bucketRanked[0].dates);
+
+  // Build the schedule
+  const occurrences = [];
+  let confirmed = 0, adjusted = 0, unavailable = 0;
+
+  for (const date of targetDates) {
+    if (anchorDates.has(date)) {
+      // Perfect match: anchor time works
+      occurrences.push({
+        date,
+        start_time: anchorTime,
+        end_time: anchorEndTime,
+        status: 'confirmed',
+        included: true
+      });
+      confirmed++;
+    } else if (dateOverlaps[date] && dateOverlaps[date].length > 0) {
+      // Anchor time doesn't fit, but there IS overlap — find closest alternative
+      let bestAlt = null;
+      let bestDist = Infinity;
+      const anchorStartMin = timeToMinutes(anchorTime);
+
+      for (const seg of dateOverlaps[date]) {
+        for (let t = seg.startUtc; t + desired_duration <= seg.endUtc; t += 15) {
+          const localStart = t + providerTzOffset;
+          const dist = Math.abs(localStart - anchorStartMin);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestAlt = { start: localStart, end: localStart + desired_duration };
+          }
+        }
+      }
+
+      if (bestAlt) {
+        occurrences.push({
+          date,
+          start_time: minutesToTime(bestAlt.start),
+          end_time: minutesToTime(bestAlt.end),
+          original_time: anchorTime,
+          status: 'adjusted_time',
+          reason: `Anchor time ${anchorTime} unavailable; closest alternative`,
+          included: true
+        });
+        adjusted++;
+      } else {
+        occurrences.push({ date, status: 'unavailable', reason: 'No slot fits desired duration', included: false });
+        unavailable++;
+      }
+    } else {
+      occurrences.push({ date, status: 'unavailable', reason: 'No overlapping availability', included: false });
+      unavailable++;
+    }
+  }
+
+  const anchorDay = new Date(targetDates[0] + 'T12:00:00');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  res.json({
+    anchor: {
+      day_of_week: dayNames[anchorDay.getDay()],
+      start_time: anchorTime,
+      end_time: anchorEndTime,
+      duration: desired_duration,
+      timezone: provider.timezone || 'America/New_York',
+      confidence: confirmed / targetDates.length
+    },
+    client: { id: client.id, name: client.name, timezone: client.timezone },
+    provider: { id: provider.id, name: provider.name, timezone: provider.timezone, specialty: provider.specialty },
+    cadence,
+    summary: { total: targetDates.length, confirmed, adjusted_time: adjusted, unavailable },
+    occurrences
+  });
+});
+
 // --- Recurring scheduling helpers ---
 function generateRecurringDates(startDate, cadence, count) {
   const dates = [];

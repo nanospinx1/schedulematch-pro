@@ -46,6 +46,7 @@ export const api = {
   getMatches: () => request('/matching'),
   createMatch: (data) => request('/matching', { method: 'POST', body: JSON.stringify(data) }),
   previewRecurring: (data) => request('/matching/recurring/preview', { method: 'POST', body: JSON.stringify(data) }),
+  smartSuggestRecurring: (data) => request('/matching/recurring/smart-suggest', { method: 'POST', body: JSON.stringify(data) }),
   createRecurring: (data) => request('/matching/recurring', { method: 'POST', body: JSON.stringify(data) }),
   deleteRecurrenceGroup: (groupId) => request(`/matching/recurring/${groupId}`, { method: 'DELETE' }),
   updateMatch: (id, data) => request(`/matching/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
