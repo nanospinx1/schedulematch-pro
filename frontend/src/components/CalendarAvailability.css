@@ -576,9 +576,20 @@
 }
 
 .cal-slot-overlay:hover {
-  background: linear-gradient(135deg, #34d399, #059669);
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.3);
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
   transform: none;
+}
+
+/* Merged view: slots side by side */
+.cal-slot-left {
+  width: 46%;
+  margin-right: auto;
+}
+
+.cal-slot-right {
+  width: 46%;
+  margin-left: auto;
 }
 
 .cal-slot-overlap {

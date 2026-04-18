@@ -195,6 +195,7 @@ export default function Calendar() {
                       availability={clientData.availability || []}
                       onChange={handleClientChange}
                       overlaySlots={providerData.availability || []}
+                      onOverlayChange={handleProviderChange}
                     />
                   </div>
                 )

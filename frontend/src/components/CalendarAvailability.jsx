@@ -97,7 +97,7 @@ function formatTime12(time24) {
 
 export default function CalendarAvailability({
   availability, onChange, hideToolbar, hideGrid,
-  overlaySlots, slotClassName,
+  overlaySlots, onOverlayChange, slotClassName,
   weekStart: extWeekStart, onWeekStartChange,
   selectedDate: extSelectedDate, onSelectedDateChange,
   monthDate: extMonthDate, onMonthDateChange,
@@ -291,6 +291,10 @@ export default function CalendarAvailability({
 
   const removeSlot = (idx) => {
     onChange(availability.filter((_, i) => i !== idx));
+  };
+
+  const removeOverlaySlot = (idx) => {
+    if (onOverlayChange) onOverlayChange(overlaySlots.filter((_, i) => i !== idx));
   };
 
   const todayStr = toDateStr(new Date());
@@ -532,6 +536,7 @@ export default function CalendarAvailability({
             {gridDates.map((d, dayIdx) => {
               const ds = toDateStr(d);
               const slots = slotsByDate[ds] || [];
+              const hasMerged = !!overlaySlots;
               return slots.map((slot) => {
                 const startRow = timeToRow(slot.start_time);
                 const endRow = timeToRow(slot.end_time);
@@ -541,7 +546,7 @@ export default function CalendarAvailability({
                 return (
                   <div
                     key={`s-${slot._idx}`}
-                    className={`cal-slot${slotClassName ? ` ${slotClassName}` : ''}`}
+                    className={`cal-slot${slotClassName ? ` ${slotClassName}` : ''}${hasMerged ? ' cal-slot-left' : ''}`}
                     style={{
                       gridColumn: dayIdx + 2,
                       gridRow: `${startRow + 2} / span ${span}`,
@@ -560,67 +565,33 @@ export default function CalendarAvailability({
               });
             })}
 
-            {/* Overlay: second person's slots (read-only, different color) */}
+            {/* Overlay: second person's slots (right half, with delete) */}
             {overlaySlots && gridDates.map((d, dayIdx) => {
               const ds = toDateStr(d);
-              const oSlots = overlayByDate[ds] || [];
-              const pSlots = slotsByDate[ds] || [];
-              return oSlots.map((slot) => {
+              const slots = overlayByDate[ds] || [];
+              return slots.map((slot) => {
                 const startRow = timeToRow(slot.start_time);
                 const endRow = timeToRow(slot.end_time);
                 const span = endRow - startRow;
                 if (span <= 0) return null;
-
-                // Check if this overlay slot overlaps any primary slot
-                const hasOverlap = pSlots.some(ps => {
-                  const pStart = timeToRow(ps.start_time);
-                  const pEnd = timeToRow(ps.end_time);
-                  return pStart < endRow && pEnd > startRow;
-                });
-
-                // Split into non-overlapping and overlapping segments
-                if (!hasOverlap) {
-                  return (
-                    <div
-                      key={`o-${slot._oidx}`}
-                      className="cal-slot cal-slot-overlay"
-                      style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
-                      title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
-                    >
-                      <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
-                    </div>
-                  );
-                }
-
-                // Build segments: split overlay slot by overlap regions
-                const segments = [];
-                let cursor = startRow;
-                const overlapping = pSlots
-                  .map(ps => ({ s: Math.max(timeToRow(ps.start_time), startRow), e: Math.min(timeToRow(ps.end_time), endRow) }))
-                  .filter(r => r.s < r.e)
-                  .sort((a, b) => a.s - b.s);
-
-                for (const ol of overlapping) {
-                  if (cursor < ol.s) segments.push({ from: cursor, to: ol.s, overlap: false });
-                  segments.push({ from: Math.max(cursor, ol.s), to: ol.e, overlap: true });
-                  cursor = ol.e;
-                }
-                if (cursor < endRow) segments.push({ from: cursor, to: endRow, overlap: false });
-
-                return segments.map((seg, si) => {
-                  const segSpan = seg.to - seg.from;
-                  if (segSpan <= 0) return null;
-                  return (
-                    <div
-                      key={`o-${slot._oidx}-${si}`}
-                      className={`cal-slot ${seg.overlap ? 'cal-slot-overlap' : 'cal-slot-overlay'}`}
-                      style={{ gridColumn: dayIdx + 2, gridRow: `${seg.from + 2} / span ${segSpan}` }}
-                      title={seg.overlap ? 'Overlapping availability' : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
-                    >
-                      {segSpan >= 2 && <span className="cal-slot-time">{seg.overlap ? '✓ Overlap' : ''}</span>}
-                    </div>
-                  );
-                });
+                return (
+                  <div
+                    key={`o-${slot._oidx}`}
+                    className="cal-slot cal-slot-overlay cal-slot-right"
+                    style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
+                    title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
+                  >
+                    <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                    {onOverlayChange && (
+                      <button
+                        type="button"
+                        className="cal-slot-delete"
+                        onClick={(e) => { e.stopPropagation(); removeOverlaySlot(slot._oidx); }}
+                        title="Remove slot"
+                      >✕</button>
+                    )}
+                  </div>
+                );
               });
             })}
 
