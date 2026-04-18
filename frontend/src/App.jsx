@@ -9,6 +9,7 @@ import Matching from './pages/Matching';
 import Communications from './pages/Communications';
 import Preferences from './pages/Preferences';
 import Calendar from './pages/Calendar';
+import AIAssistant from './pages/AIAssistant';
 
 function NavBar() {
   const { user, logout } = useAuth();
@@ -20,6 +21,7 @@ function NavBar() {
     { path: '/providers', label: 'Providers', icon: '🏥' },
     { path: '/calendar', label: 'Calendar', icon: '🗓️' },
     { path: '/matching', label: 'Scheduling', icon: '📅' },
+    { path: '/ai-assistant', label: 'AI Assistant', icon: '🤖' },
     { path: '/communications', label: 'Communications', icon: '📞' },
     { path: '/preferences', label: 'Preferences', icon: '⚙️' },
   ];
@@ -73,6 +75,7 @@ export default function App() {
           <Route path="/providers" element={<ProtectedRoute><Providers /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/matching" element={<ProtectedRoute><Matching /></ProtectedRoute>} />
+          <Route path="/ai-assistant" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
           <Route path="/communications" element={<ProtectedRoute><Communications /></ProtectedRoute>} />
           <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
         </Routes>
