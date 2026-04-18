@@ -12,6 +12,7 @@ export default function Calendar() {
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [clientData, setClientData] = useState(null);
   const [providerData, setProviderData] = useState(null);
+  const [sideBySide, setSideBySide] = useState(true);
 
   // Shared calendar navigation
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
@@ -154,23 +155,49 @@ export default function Calendar() {
                     ✅ {overlaps.length} overlap{overlaps.length !== 1 ? 's' : ''}
                   </div>
                 )}
+                {hasBoth && (
+                  <button
+                    type="button"
+                    className={`cal-layout-toggle ${sideBySide ? 'cal-layout-toggle-active' : ''}`}
+                    onClick={() => setSideBySide(!sideBySide)}
+                    title={sideBySide ? 'Switch to merged view' : 'Switch to side-by-side view'}
+                  >
+                    {sideBySide ? '⊞ Side by Side' : '⊟ Merged'}
+                  </button>
+                )}
               </div>
 
               {hasBoth ? (
-                /* Both selected: shared toolbar + side-by-side grids */
-                <div className="cal-modal-dual">
-                  <CalendarAvailability {...sharedNav} hideGrid availability={[]} onChange={() => {}} />
-                  <div className="cal-modal-grids">
-                    <div className="cal-modal-grid-panel">
-                      <div className="cal-modal-grid-label cal-modal-grid-label-client">👤 {clientData.name}</div>
-                      <CalendarAvailability {...sharedNav} hideToolbar availability={clientData.availability || []} onChange={handleClientChange} />
-                    </div>
-                    <div className="cal-modal-grid-panel">
-                      <div className="cal-modal-grid-label cal-modal-grid-label-provider">🏥 {providerData.name}</div>
-                      <CalendarAvailability {...sharedNav} hideToolbar availability={providerData.availability || []} onChange={handleProviderChange} />
+                sideBySide ? (
+                  /* Side-by-side grids */
+                  <div className="cal-modal-dual">
+                    <CalendarAvailability {...sharedNav} hideGrid availability={[]} onChange={() => {}} />
+                    <div className="cal-modal-grids">
+                      <div className="cal-modal-grid-panel">
+                        <div className="cal-modal-grid-label cal-modal-grid-label-client">👤 {clientData.name}</div>
+                        <CalendarAvailability {...sharedNav} hideToolbar availability={clientData.availability || []} onChange={handleClientChange} />
+                      </div>
+                      <div className="cal-modal-grid-panel">
+                        <div className="cal-modal-grid-label cal-modal-grid-label-provider">🏥 {providerData.name}</div>
+                        <CalendarAvailability {...sharedNav} hideToolbar availability={providerData.availability || []} onChange={handleProviderChange} />
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* Merged view: both on one calendar */
+                  <div>
+                    <div className="cal-merged-legend">
+                      <span className="cal-merged-legend-item cal-merged-legend-client">■ 👤 {clientData.name}</span>
+                      <span className="cal-merged-legend-item cal-merged-legend-provider">■ 🏥 {providerData.name}</span>
+                    </div>
+                    <CalendarAvailability
+                      {...sharedNav}
+                      availability={clientData.availability || []}
+                      onChange={handleClientChange}
+                      overlaySlots={providerData.availability || []}
+                    />
+                  </div>
+                )
               ) : (
                 /* Single calendar */
                 <CalendarAvailability

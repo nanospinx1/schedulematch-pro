@@ -540,6 +540,19 @@
   transform: scale(1.02);
 }
 
+.cal-slot-overlay {
+  background: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.3);
+  cursor: default;
+  opacity: 0.85;
+}
+
+.cal-slot-overlay:hover {
+  background: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.3);
+  transform: none;
+}
+
 .cal-slot-time {
   font-size: 10px;
   font-weight: 500;

@@ -97,6 +97,7 @@ function formatTime12(time24) {
 
 export default function CalendarAvailability({
   availability, onChange, hideToolbar, hideGrid,
+  overlaySlots,
   weekStart: extWeekStart, onWeekStartChange,
   selectedDate: extSelectedDate, onSelectedDateChange,
   monthDate: extMonthDate, onMonthDateChange,
@@ -164,6 +165,16 @@ export default function CalendarAvailability({
     });
     return map;
   }, [availability]);
+
+  const overlayByDate = useMemo(() => {
+    if (!overlaySlots?.length) return {};
+    const map = {};
+    overlaySlots.forEach((slot, idx) => {
+      if (!map[slot.date]) map[slot.date] = [];
+      map[slot.date].push({ ...slot, _oidx: idx });
+    });
+    return map;
+  }, [overlaySlots]);
 
   const monthDays = useMemo(() => getMonthCalendarDays(monthDate.getFullYear(), monthDate.getMonth()), [monthDate]);
 
@@ -522,6 +533,31 @@ export default function CalendarAvailability({
                     }}
                     onClick={(e) => { e.stopPropagation(); removeSlot(slot._idx); }}
                     title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\nClick to remove`}
+                  >
+                    <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                  </div>
+                );
+              });
+            })}
+
+            {/* Overlay: second person's slots (read-only, different color) */}
+            {overlaySlots && gridDates.map((d, dayIdx) => {
+              const ds = toDateStr(d);
+              const slots = overlayByDate[ds] || [];
+              return slots.map((slot) => {
+                const startRow = timeToRow(slot.start_time);
+                const endRow = timeToRow(slot.end_time);
+                const span = endRow - startRow;
+                if (span <= 0) return null;
+                return (
+                  <div
+                    key={`o-${slot._oidx}`}
+                    className="cal-slot cal-slot-overlay"
+                    style={{
+                      gridColumn: dayIdx + 2,
+                      gridRow: `${startRow + 2} / span ${span}`,
+                    }}
+                    title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
                   </div>
