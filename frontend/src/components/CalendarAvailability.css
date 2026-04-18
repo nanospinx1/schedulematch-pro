@@ -520,6 +520,10 @@
   background: rgba(79, 70, 229, 0.15) !important;
 }
 
+.cal-cell-offhours {
+  background: rgba(0, 0, 0, 0.03);
+}
+
 /* Availability slots */
 .cal-slot {
   background: linear-gradient(135deg, #818cf8, #6366f1);

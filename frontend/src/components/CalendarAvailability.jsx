@@ -517,11 +517,13 @@ export default function CalendarAvailability({
                   const isHighlight = dragging && dragging.dayIdx === dayIdx &&
                     row >= Math.min(dragging.startRow, dragging.currentRow) &&
                     row <= Math.max(dragging.startRow, dragging.currentRow);
+                  const dayOfWeek = d.getDay();
+                  const isOffHours = hour < 8 || hour >= 18 || dayOfWeek === 0 || dayOfWeek === 6;
 
                   return (
                     <div
                       key={`c-${row}-${dayIdx}`}
-                      className={`cal-cell ${isHourStart ? 'cal-cell-hour' : ''} ${isHighlight ? 'cal-cell-drag' : ''}`}
+                      className={`cal-cell ${isHourStart ? 'cal-cell-hour' : ''} ${isHighlight ? 'cal-cell-drag' : ''}${isOffHours ? ' cal-cell-offhours' : ''}`}
                       style={{ gridColumn: dayIdx + 2, gridRow: row + 2 }}
                       onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row); }}
                       onMouseEnter={() => handleMouseEnter(dayIdx, row)}
