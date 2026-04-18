@@ -109,7 +109,17 @@ export default function CalendarAvailability({ availability, onChange }) {
   const pickerYear = pickerMonth.getFullYear();
   const [pickerHoverWeek, setPickerHoverWeek] = useState(-1);
   const pickerRef = useRef(null);
+  const gridWrapperRef = useRef(null);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+  // Auto-scroll to ~7:45 AM on mount
+  useEffect(() => {
+    if (gridWrapperRef.current) {
+      const rowHeight = 24;
+      const headerHeight = 40;
+      gridWrapperRef.current.scrollTop = headerHeight + 15.5 * rowHeight;
+    }
+  }, []);
 
   // Close picker on outside click
   useEffect(() => {
@@ -429,7 +439,7 @@ export default function CalendarAvailability({ availability, onChange }) {
           </div>
         </div>
       ) : (
-        <div className="cal-grid-wrapper">
+        <div className="cal-grid-wrapper" ref={gridWrapperRef}>
           <div className="cal-grid" style={{ gridTemplateColumns: `56px repeat(${colCount}, 1fr)`, gridTemplateRows: `40px repeat(${totalRows}, 24px)` }}>
             {/* Header row */}
             <div className="cal-corner" style={{ gridColumn: 1, gridRow: 1 }} />
