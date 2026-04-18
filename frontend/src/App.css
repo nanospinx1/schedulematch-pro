@@ -559,7 +559,7 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .modal-fullscreen .cal-toolbar {
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
 .cal-modal-dual {
