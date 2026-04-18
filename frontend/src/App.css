@@ -553,7 +553,17 @@ tr:hover td { background: var(--gray-50); }
 }
 
 /* Dual calendar layout in modal */
-.cal-modal-dual {
+.cal-modal-dual .cal-container {
+  margin-top: 0;
+}
+
+.cal-modal-dual .cal-toolbar {
+  margin-bottom: 6px;
+}
+
+.cal-modal-grids .cal-container {
+  margin-top: 0;
+}
   display: flex;
   flex-direction: column;
   gap: 0;
