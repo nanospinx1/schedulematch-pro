@@ -10,10 +10,6 @@
   gap: 12px;
   margin-bottom: 12px;
   flex-wrap: wrap;
-  padding: 6px 10px;
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
-  border-radius: 10px;
 }
 
 /* Navigation group: ‹ Today › as a connected pill */
