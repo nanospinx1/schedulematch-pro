@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
+import CalendarAvailability, { getWeekStart } from '../components/CalendarAvailability';
+import useCalendarComparison from '../hooks/useCalendarComparison';
 
 /* ─── helpers ─── */
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -10,6 +12,83 @@ function fmt12(t){ if(!t)return''; const[h,m]=t.split(':').map(Number); return `
 function fmtDate(d){ if(!d)return''; const o=new Date(d+'T00:00:00'); return `${DAY_NAMES[o.getDay()]}, ${MONTHS[o.getMonth()]} ${o.getDate()}`; }
 function fmtMd(t){ return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/\n/g,'<br/>'); }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ── Extract actionable UI links from tool calls ── */
+function extractActions(toolCalls, clients, providers) {
+  const actions = [];
+  const seen = new Set();
+  for (const tc of toolCalls) {
+    const args = tc.arguments || {};
+    if (tc.name === 'get_availability') {
+      const id = String(args.person_id || args.client_id || args.provider_id || '');
+      const pType = args.person_type || (clients.find(c => String(c.id) === id) ? 'client' : 'provider');
+      const person = pType === 'client' ? clients.find(c => String(c.id) === id) : providers.find(p => String(p.id) === id);
+      const key = `cal-${pType}-${id}`;
+      if (id && person && !seen.has(key)) {
+        seen.add(key);
+        actions.push({
+          type: 'view_calendar', label: `Open ${person.name}'s Calendar`,
+          clientId: pType === 'client' ? Number(id) : null,
+          providerId: pType === 'provider' ? Number(id) : null,
+          clientName: pType === 'client' ? person.name : null,
+          providerName: pType === 'provider' ? person.name : null,
+        });
+      }
+    }
+    if (tc.name === 'compare_calendars') {
+      const cid = String(args.client_id || '');
+      const pid = String(args.provider_id || '');
+      const client = clients.find(c => String(c.id) === cid);
+      const provider = providers.find(p => String(p.id) === pid);
+      const key = `cmp-${cid}-${pid}`;
+      if (client && provider && !seen.has(key)) {
+        seen.add(key);
+        actions.push({
+          type: 'compare', label: `Compare ${client.name} ↔ ${provider.name}`,
+          clientId: Number(cid), providerId: Number(pid),
+          clientName: client.name, providerName: provider.name,
+        });
+      }
+    }
+    if (tc.name === 'find_available_providers') {
+      const cid = String(args.client_id || '');
+      const client = clients.find(c => String(c.id) === cid);
+      if (client && !seen.has(`find-${cid}`)) {
+        seen.add(`find-${cid}`);
+        actions.push({
+          type: 'view_calendar', label: `Open ${client.name}'s Calendar`,
+          clientId: Number(cid), providerId: null,
+          clientName: client.name, providerName: null,
+        });
+      }
+    }
+    if (tc.name === 'get_client_detail') {
+      const cid = String(args.client_id || '');
+      const client = clients.find(c => String(c.id) === cid);
+      if (client && !seen.has(`detail-c-${cid}`)) {
+        seen.add(`detail-c-${cid}`);
+        actions.push({
+          type: 'view_calendar', label: `View ${client.name}'s Calendar`,
+          clientId: Number(cid), providerId: null,
+          clientName: client.name, providerName: null,
+        });
+      }
+    }
+    if (tc.name === 'get_provider_detail') {
+      const pid = String(args.provider_id || '');
+      const provider = providers.find(p => String(p.id) === pid);
+      if (provider && !seen.has(`detail-p-${pid}`)) {
+        seen.add(`detail-p-${pid}`);
+        actions.push({
+          type: 'view_calendar', label: `View ${provider.name}'s Calendar`,
+          clientId: null, providerId: Number(pid),
+          clientName: null, providerName: provider.name,
+        });
+      }
+    }
+  }
+  return actions;
+}
 
 /* ─── Timezone helpers ─── */
 const TZ_LABELS = {
@@ -231,6 +310,177 @@ function MatchCard({ provider, slots, onBook }) {
   );
 }
 
+/* ── Action Button — opens calendar/compare view ── */
+function ActionButton({ icon, label, onClick, color = '#6366f1' }) {
+  return (
+    <button onClick={onClick} style={{
+      display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',
+      background:'#fff',border:`1.5px solid ${color}`,borderRadius:8,cursor:'pointer',
+      fontSize:12,fontWeight:600,color,marginTop:6,marginRight:6,
+      transition:'all 0.15s',
+    }}
+    onMouseEnter={e=>{e.target.style.background=color;e.target.style.color='#fff'}}
+    onMouseLeave={e=>{e.target.style.background='#fff';e.target.style.color=color}}
+    >
+      {icon} {label}
+    </button>
+  );
+}
+
+const CalendarIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>;
+const CompareIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/><path d="M10 12h4"/></svg>;
+
+/* ════════════════════════════════════════════════════
+   CALENDAR POPUP — fullscreen overlay with real CalendarAvailability
+   ════════════════════════════════════════════════════ */
+function CalendarPopup({ config, onClose }) {
+  const cal = useCalendarComparison();
+  const { type, clientId, clientName, providerId, providerName } = config;
+
+  // Auto-select client/provider on mount
+  useEffect(() => {
+    if (clientId && cal.clients.length) {
+      cal.setSelectedClientId(clientId);
+    }
+  }, [clientId, cal.clients.length]);
+
+  useEffect(() => {
+    if (providerId && cal.providers.length) {
+      cal.setSelectedProviderId(providerId);
+    }
+  }, [providerId, cal.providers.length]);
+
+  const showBoth = type === 'compare' && clientId && providerId;
+  const title = type === 'compare'
+    ? `${clientName || 'Client'} ↔ ${providerName || 'Provider'}`
+    : (clientId ? clientName : providerName) || 'Calendar';
+
+  return (
+    <div style={{
+      position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:9999,
+      background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width:'92vw',maxWidth:1200,height:'88vh',background:'#fff',borderRadius:16,
+        display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding:'14px 20px',borderBottom:'1px solid #e5e7eb',display:'flex',
+          justifyContent:'space-between',alignItems:'center',background:'#fafbfc',flexShrink:0
+        }}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {type === 'compare' ? <CompareIcon/> : <CalendarIcon/>}
+            </div>
+            <div>
+              <h3 style={{margin:0,fontSize:16,fontWeight:600}}>{title}</h3>
+              <span style={{fontSize:11,color:'#6b7280'}}>
+                {type === 'compare' ? 'Side-by-side comparison' : 'Weekly availability view'}
+              </span>
+            </div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            {/* Dropdown selectors if user wants to switch */}
+            {type === 'compare' && (
+              <>
+                <select value={cal.selectedClientId} onChange={e=>cal.setSelectedClientId(e.target.value)}
+                  style={{fontSize:12,padding:'4px 8px',borderRadius:6,border:'1px solid #d1d5db'}}>
+                  <option value="">Select Client</option>
+                  {cal.clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <span style={{color:'#9ca3af'}}>↔</span>
+                <select value={cal.selectedProviderId} onChange={e=>cal.setSelectedProviderId(e.target.value)}
+                  style={{fontSize:12,padding:'4px 8px',borderRadius:6,border:'1px solid #d1d5db'}}>
+                  <option value="">Select Provider</option>
+                  {cal.providers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <button onClick={()=>cal.setSideBySide(!cal.sideBySide)}
+                  className="btn btn-sm btn-outline" style={{fontSize:11,padding:'4px 10px'}}>
+                  {cal.sideBySide ? 'Merged' : 'Side-by-Side'}
+                </button>
+              </>
+            )}
+            {type === 'view' && !providerId && (
+              <select value={cal.selectedClientId} onChange={e=>cal.setSelectedClientId(e.target.value)}
+                style={{fontSize:12,padding:'4px 8px',borderRadius:6,border:'1px solid #d1d5db'}}>
+                <option value="">Select Client</option>
+                {cal.clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
+            {type === 'view' && !clientId && (
+              <select value={cal.selectedProviderId} onChange={e=>cal.setSelectedProviderId(e.target.value)}
+                style={{fontSize:12,padding:'4px 8px',borderRadius:6,border:'1px solid #d1d5db'}}>
+                <option value="">Select Provider</option>
+                {cal.providers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            )}
+            <button onClick={onClose} style={{
+              background:'none',border:'none',cursor:'pointer',fontSize:20,color:'#6b7280',
+              width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:6
+            }} title="Close">✕</button>
+          </div>
+        </div>
+
+        {/* Calendar Body */}
+        <div style={{flex:1,overflow:'auto',padding:16}}>
+          {showBoth && cal.sideBySide ? (
+            <div style={{display:'flex',gap:12,height:'100%'}}>
+              <div style={{flex:1,border:'1px solid #e5e7eb',borderRadius:10,overflow:'hidden'}}>
+                <div style={{padding:'6px 12px',background:'#ede9fe',fontSize:12,fontWeight:600,color:'#5b21b6'}}>
+                  {cal.clientData?.name || clientName || 'Client'}
+                </div>
+                <CalendarAvailability
+                  availability={cal.clientData?.availability || []}
+                  onChange={(slots) => cal.clientData && api.updateClient(cal.clientData.id, { availability: slots }).then(() => cal.setSelectedClientId(cal.clientData.id))}
+                  hideToolbar
+                  {...cal.sharedNav}
+                />
+              </div>
+              <div style={{flex:1,border:'1px solid #e5e7eb',borderRadius:10,overflow:'hidden'}}>
+                <div style={{padding:'6px 12px',background:'#dbeafe',fontSize:12,fontWeight:600,color:'#1d4ed8'}}>
+                  {cal.providerData?.name || providerName || 'Provider'}
+                </div>
+                <CalendarAvailability
+                  availability={cal.providerData?.availability || []}
+                  onChange={(slots) => cal.providerData && api.updateProvider(cal.providerData.id, { availability: slots }).then(() => cal.setSelectedProviderId(cal.providerData.id))}
+                  hideToolbar
+                  {...cal.sharedNav}
+                />
+              </div>
+            </div>
+          ) : showBoth && !cal.sideBySide ? (
+            <div style={{height:'100%'}}>
+              <CalendarAvailability
+                availability={cal.clientData?.availability || []}
+                onChange={(slots) => cal.clientData && api.updateClient(cal.clientData.id, { availability: slots }).then(() => cal.setSelectedClientId(cal.clientData.id))}
+                overlaySlots={cal.providerData?.availability || []}
+                {...cal.sharedNav}
+              />
+            </div>
+          ) : cal.clientData ? (
+            <CalendarAvailability
+              availability={cal.clientData.availability || []}
+              onChange={(slots) => api.updateClient(cal.clientData.id, { availability: slots }).then(() => cal.setSelectedClientId(cal.clientData.id))}
+              {...cal.sharedNav}
+            />
+          ) : cal.providerData ? (
+            <CalendarAvailability
+              availability={cal.providerData.availability || []}
+              onChange={(slots) => api.updateProvider(cal.providerData.id, { availability: slots }).then(() => cal.setSelectedProviderId(cal.providerData.id))}
+              {...cal.sharedNav}
+            />
+          ) : (
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#9ca3af',fontSize:14}}>
+              Select a client or provider above to view their calendar
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════
    MAIN COMPONENT
    ════════════════════════════════════════════════════ */
@@ -250,6 +500,7 @@ export default function AIAssistant() {
   const [bookSlot, setBookSlot]     = useState(null);
   const [bookNotes, setBookNotes]   = useState('');
   const [conflict, setConflict]     = useState(null);
+  const [calendarModal, setCalendarModal] = useState(null); // { type:'view'|'compare', clientId, clientName, providerId, providerName }
 
   const refreshData = useCallback(async () => {
     const [c, p] = await Promise.all([api.getClients(), api.getProviders()]);
@@ -440,14 +691,21 @@ export default function AIAssistant() {
             const cSugg = await api.getSuggestions(c.clientId);
             // The suggestions endpoint returns provider-client overlaps; for client-only, show raw availability
             add({ role:'assistant',type:'text',content:`Here\u2019s **${c.clientName}**\u2019s schedule overview. They have availability data loaded.` });
+            add({ role:'assistant',type:'actions', actions:[
+              { type:'view_calendar', label:`Open ${c.clientName}'s Calendar`, clientId:c.clientId, clientName:c.clientName, providerId:null, providerName:null }
+            ]});
             if (isCompare && c.providerId) {
               const data = await api.realtimeSuggest({ client_id:c.clientId, weeks_ahead:4 });
               const prov = data.providers?.find(p=>p.provider.id===c.providerId);
               if (prov && prov.slots.length>0) {
                 add({ role:'assistant',type:'text',content:`**Overlapping slots** between **${c.clientName}** and **${c.providerName}**:` });
-                add({ role:'assistant',type:'availability',slots:prov.slots,personName:`${c.clientName} \u2229 ${c.providerName}` });
+                add({ role:'assistant',type:'availability',slots:prov.slots,personName:`${c.clientName} \u2229 ${c.providerName}`,
+                  clientId:c.clientId, clientName:c.clientName, providerId:c.providerId, providerName:c.providerName });
               } else {
                 add({ role:'assistant',type:'text',content:`No overlapping availability found between **${c.clientName}** and **${c.providerName}** in the next 4 weeks.` });
+                add({ role:'assistant',type:'actions', actions:[
+                  { type:'compare', label:`Compare ${c.clientName} ↔ ${c.providerName}`, clientId:c.clientId, clientName:c.clientName, providerId:c.providerId, providerName:c.providerName }
+                ]});
               }
             }
           } else {
@@ -457,11 +715,15 @@ export default function AIAssistant() {
               const data = await api.realtimeSuggest({ client_id:cc[0].id, weeks_ahead:4 });
               const prov = data.providers?.find(p=>p.provider.id===c.providerId);
               if (prov) {
-                add({ role:'assistant',type:'availability',slots:prov.slots,personName:c.providerName });
+                add({ role:'assistant',type:'availability',slots:prov.slots,personName:c.providerName,
+                  providerId:c.providerId, providerName:c.providerName });
               } else {
                 add({ role:'assistant',type:'text',content:'No availability data found for this provider in the next 4 weeks.' });
               }
             }
+            add({ role:'assistant',type:'actions', actions:[
+              { type:'view_calendar', label:`Open ${c.providerName}'s Calendar`, clientId:null, clientName:null, providerId:c.providerId, providerName:c.providerName }
+            ]});
           }
         } catch(e) { add({role:'assistant',type:'text',content:'Error loading calendar data.'}); }
         break;
@@ -504,7 +766,7 @@ export default function AIAssistant() {
           const dayStr=intent.days.length>0?intent.days.map(d=>DAY_FULL[d]+'s').join(' and '):'all days';
           const timeStr=intent.timeHint?intent.timeHint.label:'any time';
           add({role:'assistant',type:'text',content:`Found **${data.providers.length} provider${data.providers.length!==1?'s':''}** for **${c.clientName}** on ${dayStr}, ${timeStr}:`});
-          add({role:'assistant',type:'providers',providers:data.providers.slice(0,5),clientId:c.clientId});
+          add({role:'assistant',type:'providers',providers:data.providers.slice(0,5),clientId:c.clientId,clientName:c.clientName});
           if(data.providers.length>5) add({role:'assistant',type:'text',content:`Plus ${data.providers.length-5} more. Ask to see more or refine.`});
           add({role:'assistant',type:'text',content:'Click **Book** on any slot, or refine: *\"only mornings\"*, *\"what about Fridays?\"*'});
         }
@@ -559,6 +821,12 @@ export default function AIAssistant() {
       const reply = res.response || 'I processed your request but got no response.';
       llmHistory.current.push({ role: 'assistant', content: reply });
       add({ role: 'assistant', type: 'text', content: reply });
+
+      // Detect calendar-related tool calls and inject action buttons
+      const actions = extractActions(res.tool_calls || [], clients, providers);
+      if (actions.length) {
+        add({ role: 'assistant', type: 'actions', actions });
+      }
     } catch (e) {
       if (e.status === 503) {
         setUseRealAI(false);
@@ -568,7 +836,7 @@ export default function AIAssistant() {
       add({ role: 'assistant', type: 'text', content: `⚠️ AI error: ${e.data?.error || e.message || 'Unknown error'}` });
     }
     setThinking(false);
-  }, [add, agent]);
+  }, [add, agent, clients, providers]);
 
   const handleSend = async () => {
     const t=input.trim(); if(!t||isThinking) return;
@@ -601,8 +869,45 @@ export default function AIAssistant() {
     if (msg.type==='client_list') return <div style={{maxWidth:500}}>{msg.items.map(c=><ClientCard key={c.id} c={c}/>)}</div>;
     if (msg.type==='provider_list') return <div style={{maxWidth:500}}>{msg.items.map(p=><ProviderListCard key={p.id} p={p}/>)}</div>;
     if (msg.type==='session_list') return <div style={{maxWidth:540}}>{msg.items.map(s=><SessionRow key={s.id} s={s}/>)}</div>;
-    if (msg.type==='availability') return <AvailabilityBlock slots={msg.slots} personName={msg.personName}/>;
-    if (msg.type==='providers') return <div style={{maxWidth:520}}>{msg.providers.map((p,i)=><MatchCard key={i} provider={p.provider} slots={p.slots.slice(0,3)} onBook={(sl)=>handleBook(sl,p.provider.id)}/>)}</div>;
+    if (msg.type==='availability') return (
+      <div>
+        <AvailabilityBlock slots={msg.slots} personName={msg.personName}/>
+        {msg.clientId && <ActionButton icon={<CalendarIcon/>} label={`Open ${msg.personName.split(' ∩ ')[0]}'s Calendar`} onClick={()=>setCalendarModal({
+          type: msg.providerId ? 'compare' : 'view',
+          clientId: msg.clientId, clientName: msg.clientName,
+          providerId: msg.providerId || null, providerName: msg.providerName || null,
+        })} color="#059669"/>}
+        {msg.providerId && !msg.clientId && <ActionButton icon={<CalendarIcon/>} label={`Open ${msg.personName}'s Calendar`} onClick={()=>setCalendarModal({
+          type: 'view', clientId: null, clientName: null,
+          providerId: msg.providerId, providerName: msg.personName,
+        })} color="#2563eb"/>}
+      </div>
+    );
+    if (msg.type==='providers') return (
+      <div style={{maxWidth:520}}>
+        {msg.providers.map((p,i)=><MatchCard key={i} provider={p.provider} slots={p.slots.slice(0,3)} onBook={(sl)=>handleBook(sl,p.provider.id)}/>)}
+        {msg.clientId && <ActionButton icon={<CalendarIcon/>} label={`Open ${msg.clientName || 'Client'}'s Calendar`} onClick={()=>setCalendarModal({
+          type: 'view', clientId: msg.clientId, clientName: msg.clientName,
+          providerId: null, providerName: null,
+        })} color="#059669"/>}
+      </div>
+    );
+    if (msg.type==='actions') return (
+      <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+        {msg.actions.map((a, i) => (
+          <ActionButton key={i}
+            icon={a.type === 'compare' ? <CompareIcon/> : <CalendarIcon/>}
+            label={a.label}
+            color={a.type === 'compare' ? '#7c3aed' : '#059669'}
+            onClick={() => setCalendarModal({
+              type: a.type === 'compare' ? 'compare' : 'view',
+              clientId: a.clientId, clientName: a.clientName,
+              providerId: a.providerId, providerName: a.providerName,
+            })}
+          />
+        ))}
+      </div>
+    );
     if (msg.type==='created') return (
       <div style={{background:'#ede9fe',border:'1px solid #c4b5fd',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#5b21b6'}}>
         <strong>{msg.entity==='client'?'Client':'Provider'} added:</strong> {msg.name}
@@ -744,6 +1049,11 @@ export default function AIAssistant() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Calendar Popup */}
+      {calendarModal && (
+        <CalendarPopup config={calendarModal} onClose={() => setCalendarModal(null)} />
       )}
     </div>
   );
