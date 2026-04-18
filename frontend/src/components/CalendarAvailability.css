@@ -517,16 +517,16 @@
 }
 
 .cal-cell-drag {
-  background: rgba(79, 70, 229, 0.12) !important;
+  background: rgba(129, 140, 248, 0.15) !important;
 }
 
 .cal-cell-offhours {
-  background: #f9fafb;
+  background: #f1f5f9;
 }
 
 /* Availability slots */
 .cal-slot {
-  background: #4f46e5;
+  background: #818cf8;
   border-radius: 4px;
   margin: 1px 3px;
   padding: 2px 6px;
@@ -535,8 +535,8 @@
   z-index: 1;
   position: relative;
   transition: all 0.15s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  border-left: 3px solid #3730a3;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #6366f1;
 }
 
 .cal-slot:hover {
@@ -574,10 +574,11 @@
 }
 
 .cal-slot-overlay {
-  background: #059669;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  border-left: 3px solid #047857;
+  background: #6ee7b7;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #34d399;
   cursor: default;
+  color: #065f46;
 }
 
 .cal-slot-overlay:hover {
@@ -599,10 +600,10 @@
 .cal-slot-overlap {
   background: repeating-linear-gradient(
     -45deg,
-    #4f46e5,
-    #4f46e5 4px,
-    #059669 4px,
-    #059669 8px
+    #818cf8,
+    #818cf8 4px,
+    #6ee7b7 4px,
+    #6ee7b7 8px
   );
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   cursor: default;
@@ -614,9 +615,10 @@
 }
 
 .cal-slot-provider {
-  background: #059669;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  border-left: 3px solid #047857;
+  background: #6ee7b7;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  border-left: 3px solid #34d399;
+  color: #065f46;
 }
 
 .cal-slot-provider:hover {
