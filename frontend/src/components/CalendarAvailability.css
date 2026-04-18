@@ -217,18 +217,26 @@
   border-radius: 50%;
 }
 
+.cal-picker-today.cal-picker-sel-week,
+.cal-picker-today.cal-picker-hover-week {
+  color: var(--primary) !important;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
 .cal-picker-today:hover {
   background: var(--primary-hover);
 }
 
 .cal-picker-hover-week,
 .cal-picker-hover-week.cal-picker-dim {
-  background: var(--gray-100);
+  background: rgba(79, 70, 229, 0.08);
   border-radius: 0;
 }
 
 .cal-picker-sel-week {
-  background: rgba(79, 70, 229, 0.12);
+  background: rgba(79, 70, 229, 0.1);
   border-radius: 0;
 }
 
@@ -278,12 +286,13 @@
 }
 
 .cal-picker-year-month-active {
-  background: var(--primary);
-  color: white;
+  background: rgba(79, 70, 229, 0.1);
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .cal-picker-year-month-active:hover {
-  background: var(--primary-hover);
+  background: rgba(79, 70, 229, 0.15);
 }
 
 .cal-picker-today-link {
