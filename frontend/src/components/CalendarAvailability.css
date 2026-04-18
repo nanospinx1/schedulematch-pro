@@ -443,7 +443,7 @@
   padding: 4px;
   background: var(--gray-50);
   border-bottom: 2px solid var(--gray-200);
-  border-right: 1px solid var(--gray-100);
+  border-right: 2px solid var(--gray-200);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -502,7 +502,7 @@
 
 /* Cells */
 .cal-cell {
-  border-right: 1px solid var(--gray-100);
+  border-right: 2px solid var(--gray-200);
   border-top: 1px dashed var(--gray-100);
   cursor: crosshair;
   transition: background 0.1s;
