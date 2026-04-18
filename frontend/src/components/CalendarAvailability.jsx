@@ -578,9 +578,8 @@ export default function CalendarAvailability({
                     }}
                     onClick={() => {}}
                     onDoubleClick={() => handleSlotClick(slot._idx, false)}
-                    onMouseEnter={(e) => {
-                      const r = e.currentTarget.getBoundingClientRect();
-                      setHoveredSlot({ x: r.left + r.width / 2, y: r.top, startTime: slot.start_time, endTime: slot.end_time, note: slot.note });
+                    onMouseMove={(e) => {
+                      setHoveredSlot({ x: e.clientX, y: e.clientY, startTime: slot.start_time, endTime: slot.end_time, note: slot.note });
                     }}
                     onMouseLeave={() => setHoveredSlot(null)}
                   >
@@ -613,9 +612,8 @@ export default function CalendarAvailability({
                     style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
                     onClick={() => {}}
                     onDoubleClick={() => handleSlotClick(slot._oidx, true)}
-                    onMouseEnter={(e) => {
-                      const r = e.currentTarget.getBoundingClientRect();
-                      setHoveredSlot({ x: r.left + r.width / 2, y: r.top, startTime: slot.start_time, endTime: slot.end_time, note: slot.note });
+                    onMouseMove={(e) => {
+                      setHoveredSlot({ x: e.clientX, y: e.clientY, startTime: slot.start_time, endTime: slot.end_time, note: slot.note });
                     }}
                     onMouseLeave={() => setHoveredSlot(null)}
                   >
@@ -653,7 +651,7 @@ export default function CalendarAvailability({
 
       {/* Hover tooltip (fixed position, escapes overflow) */}
       {hoveredSlot && (
-        <div className="cal-slot-tooltip" style={{ left: hoveredSlot.x, top: hoveredSlot.y }}>
+        <div className="cal-slot-tooltip" style={{ left: hoveredSlot.x + 12, top: hoveredSlot.y + 12 }}>
           <div className="cal-slot-tooltip-time">{formatTime12(hoveredSlot.startTime)} – {formatTime12(hoveredSlot.endTime)}</div>
           {hoveredSlot.note && <div className="cal-slot-tooltip-note">📝 {hoveredSlot.note}</div>}
         </div>
