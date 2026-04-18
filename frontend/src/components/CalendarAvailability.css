@@ -517,16 +517,16 @@
 }
 
 .cal-cell-drag {
-  background: rgba(129, 140, 248, 0.15) !important;
+  background: rgba(98, 100, 167, 0.1) !important;
 }
 
 .cal-cell-offhours {
-  background: #f1f5f9;
+  background: #edebe9;
 }
 
 /* Availability slots */
 .cal-slot {
-  background: #818cf8;
+  background: #e8ebfa;
   border-radius: 4px;
   margin: 1px 3px;
   padding: 2px 6px;
@@ -536,12 +536,13 @@
   position: relative;
   transition: all 0.15s;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid #6264a7;
+  color: #252423;
 }
 
 .cal-slot:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-  filter: brightness(1.1);
+  background: #dce0f7;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14);
 }
 
 .cal-slot-delete {
@@ -552,8 +553,8 @@
   height: 16px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  color: white;
+  background: rgba(37, 36, 35, 0.25);
+  color: #252423;
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -569,21 +570,21 @@
 }
 
 .cal-slot-delete:hover {
-  background: #dc2626;
+  background: #c4314b;
   transform: scale(1.15);
 }
 
 .cal-slot-overlay {
-  background: #6ee7b7;
+  background: #e2f3df;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  border-left: 3px solid #34d399;
+  border-left: 3px solid #92c353;
   cursor: default;
-  color: #065f46;
+  color: #252423;
 }
 
 .cal-slot-overlay:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-  filter: brightness(1.1);
+  background: #d4edcf;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14);
 }
 
 /* Merged view: slots side by side */
@@ -600,14 +601,14 @@
 .cal-slot-overlap {
   background: repeating-linear-gradient(
     -45deg,
-    #818cf8,
-    #818cf8 4px,
-    #6ee7b7 4px,
-    #6ee7b7 8px
+    #e8ebfa,
+    #e8ebfa 4px,
+    #e2f3df 4px,
+    #e2f3df 8px
   );
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   cursor: default;
-  border-left: 3px solid #374151;
+  border-left: 3px solid #8b8cc7;
 }
 
 .cal-slot-overlap:hover {
@@ -615,15 +616,15 @@
 }
 
 .cal-slot-provider {
-  background: #6ee7b7;
+  background: #e2f3df;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  border-left: 3px solid #34d399;
-  color: #065f46;
+  border-left: 3px solid #92c353;
+  color: #252423;
 }
 
 .cal-slot-provider:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-  filter: brightness(1.1);
+  background: #d4edcf;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14);
 }
 
 .cal-slot-time {
