@@ -25,7 +25,7 @@ function formatTzLabel(tz) {
   } catch { return tz; }
 }
 
-function getWeekStart(date) {
+export function getWeekStart(date) {
   const d = new Date(date);
   const day = d.getDay();
   d.setDate(d.getDate() - day);
@@ -95,13 +95,31 @@ function formatTime12(time24) {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-export default function CalendarAvailability({ availability, onChange }) {
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date(); d.setHours(0,0,0,0); return d;
-  });
-  const [monthDate, setMonthDate] = useState(() => new Date());
-  const [viewMode, setViewMode] = useState('week');
+export default function CalendarAvailability({
+  availability, onChange, hideToolbar, hideGrid,
+  weekStart: extWeekStart, onWeekStartChange,
+  selectedDate: extSelectedDate, onSelectedDateChange,
+  monthDate: extMonthDate, onMonthDateChange,
+  viewMode: extViewMode, onViewModeChange,
+  timezone: extTimezone, onTimezoneChange,
+}) {
+  const [_weekStart, _setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [_selectedDate, _setSelectedDate] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
+  const [_monthDate, _setMonthDate] = useState(() => new Date());
+  const [_viewMode, _setViewMode] = useState('week');
+  const [_timezone, _setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+  const weekStart = extWeekStart !== undefined ? extWeekStart : _weekStart;
+  const setWeekStart = onWeekStartChange || _setWeekStart;
+  const selectedDate = extSelectedDate !== undefined ? extSelectedDate : _selectedDate;
+  const setSelectedDate = onSelectedDateChange || _setSelectedDate;
+  const monthDate = extMonthDate !== undefined ? extMonthDate : _monthDate;
+  const setMonthDate = onMonthDateChange || _setMonthDate;
+  const viewMode = extViewMode !== undefined ? extViewMode : _viewMode;
+  const setViewMode = onViewModeChange || _setViewMode;
+  const timezone = extTimezone !== undefined ? extTimezone : _timezone;
+  const setTimezone = onTimezoneChange || _setTimezone;
+
   const [dragging, setDragging] = useState(null);
   const [now, setNow] = useState(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -110,7 +128,6 @@ export default function CalendarAvailability({ availability, onChange }) {
   const [pickerHoverWeek, setPickerHoverWeek] = useState(-1);
   const pickerRef = useRef(null);
   const gridWrapperRef = useRef(null);
-  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
   // Auto-scroll to 8 AM on mount (offset by header height so 8 AM is visible)
   useEffect(() => {
@@ -294,6 +311,7 @@ export default function CalendarAvailability({ availability, onChange }) {
 
   return (
     <div className="cal-container" onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
+      {!hideToolbar && (
       <div className="cal-toolbar">
         <div className="cal-toolbar-row">
           <div className="cal-nav">
@@ -407,8 +425,9 @@ export default function CalendarAvailability({ availability, onChange }) {
           </div>
         </div>
       </div>
+      )}
 
-      {viewMode === 'month' ? (
+      {!hideGrid && (viewMode === 'month' ? (
         <div className="cal-month-grid-wrapper">
           <div className="cal-month-grid">
             {DAY_LABELS.map(label => (
@@ -527,7 +546,7 @@ export default function CalendarAvailability({ availability, onChange }) {
             )}
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }

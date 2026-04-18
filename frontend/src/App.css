@@ -494,6 +494,32 @@ tr:hover td { background: var(--gray-50); }
   font-size: 15px;
 }
 
+.cal-page-single {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.cal-page-panel-header-single {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(79, 70, 229, 0.06);
+  color: var(--primary);
+}
+
+.cal-page-dual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .cal-page-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
