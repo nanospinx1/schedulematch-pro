@@ -559,7 +559,7 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .modal-fullscreen .cal-toolbar {
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 
 .cal-modal-dual {
@@ -638,7 +638,7 @@ tr:hover td { background: var(--gray-50); }
 .cal-merged-legend {
   display: flex;
   gap: 16px;
-  margin-bottom: 8px;
+  margin-bottom: 20px;
   font-size: 12px;
   font-weight: 600;
 }
