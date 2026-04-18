@@ -374,6 +374,39 @@
   font-style: italic;
 }
 
+/* Timezone selector */
+.cal-tz-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0 8px 0 10px;
+  height: 36px;
+}
+
+.cal-tz-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.cal-tz-select {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--gray-700);
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  max-width: 240px;
+}
+
+.cal-tz-select:hover {
+  color: var(--gray-900);
+}
+
 /* Grid wrapper for scroll */
 .cal-grid-wrapper {
   border: 1px solid var(--gray-200);

@@ -7,6 +7,24 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+const COMMON_TIMEZONES = [
+  'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles', 'America/Denver',
+  'America/Chicago', 'America/New_York', 'America/Halifax', 'America/Sao_Paulo',
+  'Atlantic/Reykjavik', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+  'Europe/Istanbul', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Bangkok',
+  'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+];
+
+function formatTzLabel(tz) {
+  try {
+    const now = new Date();
+    const short = now.toLocaleString('en-US', { timeZone: tz, timeZoneName: 'short' }).split(' ').pop();
+    const offset = now.toLocaleString('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).split('GMT').pop() || '+0';
+    const city = tz.split('/').pop().replace(/_/g, ' ');
+    return `(GMT${offset}) ${city} (${short})`;
+  } catch { return tz; }
+}
+
 function getWeekStart(date) {
   const d = new Date(date);
   const day = d.getDay();
@@ -91,6 +109,7 @@ export default function CalendarAvailability({ availability, onChange }) {
   const pickerYear = pickerMonth.getFullYear();
   const [pickerHoverWeek, setPickerHoverWeek] = useState(-1);
   const pickerRef = useRef(null);
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
   // Close picker on outside click
   useEffect(() => {
@@ -362,6 +381,18 @@ export default function CalendarAvailability({ availability, onChange }) {
           ))}
         </div>
         <div className="cal-hint">Click &amp; drag to add • Click slot to remove</div>
+        <div className="cal-tz-wrapper">
+          <span className="cal-tz-icon">🌐</span>
+          <select className="cal-tz-select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+            {(() => {
+              const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              const allTzs = COMMON_TIMEZONES.includes(browserTz) ? COMMON_TIMEZONES : [browserTz, ...COMMON_TIMEZONES];
+              return allTzs.map(tz => (
+                <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
+              ));
+            })()}
+          </select>
+        </div>
       </div>
 
       {viewMode === 'month' ? (
