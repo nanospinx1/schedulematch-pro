@@ -641,13 +641,65 @@
   white-space: nowrap;
 }
 
-.cal-slot-note-icon {
+.cal-slot-note-text {
+  display: block;
   font-size: 9px;
-  margin-left: 2px;
+  color: #484644;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
 }
 
 .cal-slot-has-note {
   cursor: pointer;
+}
+
+/* Custom hover tooltip */
+.cal-slot-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #252423;
+  color: white;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.cal-slot-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #252423;
+}
+
+.cal-slot:hover .cal-slot-tooltip {
+  display: block;
+}
+
+.cal-slot-tooltip-note {
+  margin-top: 4px;
+  color: #c8c6c4;
+  white-space: normal;
+  max-width: 220px;
+}
+
+.cal-slot-tooltip-hint {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #979593;
+  font-style: italic;
 }
 
 /* Note editing popup */

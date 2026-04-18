@@ -575,12 +575,16 @@ export default function CalendarAvailability({
                       gridColumn: dayIdx + 2,
                       gridRow: `${startRow + 2} / span ${span}`,
                     }}
-                    title={slot.note ? `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\n📝 ${slot.note}` : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
                     onClick={() => {}}
                     onDoubleClick={() => handleSlotClick(slot._idx, false)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
-                    {slot.note && <span className="cal-slot-note-icon">📝</span>}
+                    {slot.note && <span className="cal-slot-note-text">{slot.note}</span>}
+                    <div className="cal-slot-tooltip">
+                      <div>{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</div>
+                      {slot.note && <div className="cal-slot-tooltip-note">📝 {slot.note}</div>}
+                      <div className="cal-slot-tooltip-hint">Double-click to {slot.note ? 'edit' : 'add'} note</div>
+                    </div>
                     <button
                       type="button"
                       className="cal-slot-delete"
@@ -606,12 +610,16 @@ export default function CalendarAvailability({
                     key={`o-${slot._oidx}`}
                     className={`cal-slot cal-slot-overlay cal-slot-right${slot.note ? ' cal-slot-has-note' : ''}`}
                     style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
-                    title={slot.note ? `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\n📝 ${slot.note}` : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
                     onClick={() => {}}
                     onDoubleClick={() => handleSlotClick(slot._oidx, true)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
-                    {slot.note && <span className="cal-slot-note-icon">📝</span>}
+                    {slot.note && <span className="cal-slot-note-text">{slot.note}</span>}
+                    <div className="cal-slot-tooltip">
+                      <div>{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</div>
+                      {slot.note && <div className="cal-slot-tooltip-note">📝 {slot.note}</div>}
+                      <div className="cal-slot-tooltip-hint">Double-click to {slot.note ? 'edit' : 'add'} note</div>
+                    </div>
                     {onOverlayChange && (
                       <button
                         type="button"
