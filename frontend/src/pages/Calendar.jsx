@@ -225,6 +225,7 @@ export default function Calendar() {
                   {...sharedNav}
                   availability={(clientData || providerData)?.availability || []}
                   onChange={clientData ? handleClientChange : handleProviderChange}
+                  slotClassName={providerData && !clientData ? 'cal-slot-provider' : undefined}
                 />
               )}
             </div>
