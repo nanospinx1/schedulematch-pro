@@ -302,8 +302,7 @@ tr:hover td { background: var(--gray-50); }
 .modal.modal-fullscreen .modal-body {
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
 }
 
 .modal-header {

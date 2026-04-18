@@ -175,7 +175,7 @@ export default function StandardSchedulingModal({ onClose, onBooked }) {
           <h3>Auto-Match Scheduling</h3>
           <button className="btn-ghost" onClick={onClose}>✕</button>
         </div>
-        <div className="modal-body" style={{ padding: 24 }}>
+        <div className="modal-body" style={{ padding: 24, flex: 1, overflowY: 'auto', minHeight: 0 }}>
           <p style={{ color: '#6b7280', marginBottom: 16 }}>
             Select a client whose availability is already in the system. The engine will find the best matching providers.
           </p>
