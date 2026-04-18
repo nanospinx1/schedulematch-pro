@@ -313,8 +313,16 @@ export default function CalendarAvailability({
     setPickerOpen(!pickerOpen);
   };
 
-  const handleMouseDown = (dayIdx, row) => {
-    setDragging({ dayIdx, startRow: row, currentRow: row });
+  // Determine if click is on the right half of cell (for merged mode provider side)
+  const isRightHalf = (e) => {
+    if (!overlaySlots) return false;
+    const rect = e.currentTarget.getBoundingClientRect();
+    return (e.clientX - rect.left) > rect.width / 2;
+  };
+
+  const handleMouseDown = (dayIdx, row, e) => {
+    const targetOverlay = isRightHalf(e);
+    setDragging({ dayIdx, startRow: row, currentRow: row, targetOverlay });
   };
 
   const handleMouseEnter = (dayIdx, row) => {
@@ -325,7 +333,7 @@ export default function CalendarAvailability({
 
   const handleMouseUp = () => {
     if (!dragging) return;
-    const { dayIdx, startRow, currentRow } = dragging;
+    const { dayIdx, startRow, currentRow, targetOverlay } = dragging;
     // Ignore single click (no drag) — use double-click instead
     if (startRow === currentRow) { setDragging(null); return; }
     const fromRow = Math.min(startRow, currentRow);
@@ -350,11 +358,15 @@ export default function CalendarAvailability({
     }
 
     const newSlot = { date: storeDate, start_time: startStore.time, end_time: endStore.time };
-    onChange([...availability, newSlot]);
+    if (targetOverlay && onOverlayChange) {
+      onOverlayChange([...overlaySlots, newSlot]);
+    } else {
+      onChange([...availability, newSlot]);
+    }
     setDragging(null);
   };
 
-  const handleDoubleClick = (dayIdx, row) => {
+  const handleDoubleClick = (dayIdx, row, e) => {
     let date;
     if (viewMode === 'day') {
       date = toDateStr(selectedDate);
@@ -372,7 +384,13 @@ export default function CalendarAvailability({
       d.setDate(d.getDate() + startStore.dayOffset);
       storeDate = toDateStr(d);
     }
-    onChange([...availability, { date: storeDate, start_time: startStore.time, end_time: endStore.time }]);
+    const newSlot = { date: storeDate, start_time: startStore.time, end_time: endStore.time };
+    const targetOverlay = isRightHalf(e);
+    if (targetOverlay && onOverlayChange) {
+      onOverlayChange([...overlaySlots, newSlot]);
+    } else {
+      onChange([...availability, newSlot]);
+    }
   };
 
   const removeSlot = (idx) => {
@@ -452,7 +470,7 @@ export default function CalendarAvailability({
   }, [gridDates, todayStr, now, viewMode, tzOffsetMin]);
 
   return (
-    <div className="cal-container" onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
+    <div className={`cal-container${overlaySlots ? ' cal-merged' : ''}`} onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
       {!hideToolbar && (
       <div className="cal-toolbar">
         <div className="cal-toolbar-row">
@@ -630,17 +648,18 @@ export default function CalendarAvailability({
                   const isHighlight = dragging && dragging.dayIdx === dayIdx &&
                     row >= Math.min(dragging.startRow, dragging.currentRow) &&
                     row <= Math.max(dragging.startRow, dragging.currentRow);
+                  const dragClass = isHighlight ? (dragging.targetOverlay ? 'cal-cell-drag-overlay' : 'cal-cell-drag') : '';
                   const dayOfWeek = d.getDay();
                   const isOffHours = hour < 8 || hour >= 18 || dayOfWeek === 0 || dayOfWeek === 6;
 
                   return (
                     <div
                       key={`c-${row}-${dayIdx}`}
-                      className={`cal-cell ${isHourStart ? 'cal-cell-hour' : ''} ${isHighlight ? 'cal-cell-drag' : ''}${isOffHours ? ' cal-cell-offhours' : ''}`}
+                      className={`cal-cell ${isHourStart ? 'cal-cell-hour' : ''} ${dragClass}${isOffHours ? ' cal-cell-offhours' : ''}`}
                       style={{ gridColumn: dayIdx + 2, gridRow: row + 2 }}
-                      onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row); }}
+                      onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row, e); }}
                       onMouseEnter={() => handleMouseEnter(dayIdx, row)}
-                      onDoubleClick={() => handleDoubleClick(dayIdx, row)}
+                      onDoubleClick={(e) => handleDoubleClick(dayIdx, row, e)}
                     />
                   );
                 })

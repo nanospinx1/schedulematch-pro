@@ -519,6 +519,14 @@
 .cal-cell-drag {
   background: rgba(98, 100, 167, 0.1) !important;
 }
+.cal-cell-drag-overlay {
+  background: rgba(5, 150, 105, 0.1) !important;
+}
+
+/* Merged mode: subtle split indicator on cell hover */
+.cal-merged .cal-cell:hover {
+  background: linear-gradient(to right, rgba(98, 100, 167, 0.06) 50%, rgba(5, 150, 105, 0.06) 50%) !important;
+}
 
 .cal-cell-offhours {
   background: repeating-linear-gradient(
