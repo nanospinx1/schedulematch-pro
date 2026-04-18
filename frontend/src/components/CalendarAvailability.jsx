@@ -259,6 +259,8 @@ export default function CalendarAvailability({
   const handleMouseUp = () => {
     if (!dragging) return;
     const { dayIdx, startRow, currentRow } = dragging;
+    // Ignore single click (no drag) — use double-click instead
+    if (startRow === currentRow) { setDragging(null); return; }
     const fromRow = Math.min(startRow, currentRow);
     const toRow = Math.max(startRow, currentRow);
     let date;
@@ -273,6 +275,18 @@ export default function CalendarAvailability({
     const newSlot = { date, start_time, end_time };
     onChange([...availability, newSlot]);
     setDragging(null);
+  };
+
+  const handleDoubleClick = (dayIdx, row) => {
+    let date;
+    if (viewMode === 'day') {
+      date = toDateStr(selectedDate);
+    } else {
+      date = toDateStr(weekDates[dayIdx]);
+    }
+    const start_time = rowToTime(row);
+    const end_time = rowToTime(row + 1);
+    onChange([...availability, { date, start_time, end_time }]);
   };
 
   const removeSlot = (idx) => {
@@ -419,7 +433,7 @@ export default function CalendarAvailability({
               </button>
             ))}
           </div>
-          <div className="cal-hint">Click &amp; drag to add • Hover slot ✕ to remove</div>
+          <div className="cal-hint">Double-click or drag to add • Hover ✕ to remove</div>
           <div className="cal-tz-wrapper">
             <span className="cal-tz-icon">🌐</span>
             <select className="cal-tz-select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
@@ -507,6 +521,7 @@ export default function CalendarAvailability({
                       style={{ gridColumn: dayIdx + 2, gridRow: row + 2 }}
                       onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row); }}
                       onMouseEnter={() => handleMouseEnter(dayIdx, row)}
+                      onDoubleClick={() => handleDoubleClick(dayIdx, row)}
                     />
                   );
                 })
