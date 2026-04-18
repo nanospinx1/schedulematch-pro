@@ -199,38 +199,112 @@ router.get('/suggestions/:clientId', (req, res) => {
   });
 });
 
-// Real-time suggestion endpoint (for use during phone calls)
+// Real-time suggestion endpoint (enhanced for phone scheduling)
 router.post('/realtime-suggest', (req, res) => {
-  const { client_id, preferred_dates, preferred_time_start, preferred_time_end } = req.body;
+  const { client_id, day_of_week, preferred_dates, time_start, time_end, min_duration, weeks_ahead } = req.body;
 
   const client = db.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').get(client_id, req.user.id);
   if (!client) return res.status(404).json({ error: 'Client not found' });
 
   const today = new Date().toISOString().split('T')[0];
+  const horizon = weeks_ahead || 4;
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + horizon * 7);
+  const endDateStr = endDate.toISOString().split('T')[0];
+
+  const clientTzOffset = getUtcOffsetMinutes(client.timezone || 'America/New_York');
+  const clientBooked = getBookedRanges(req.user.id, 'client', client.id, today);
+
   const providers = db.prepare('SELECT * FROM providers WHERE user_id = ?').all(req.user.id);
-  const results = [];
+  const providerResults = [];
+
+  // Build date filter set (union of preferred_dates + day_of_week within horizon)
+  const allowedDates = new Set();
+  if (preferred_dates && preferred_dates.length > 0) {
+    preferred_dates.forEach(d => allowedDates.add(d));
+  }
+  if (day_of_week && day_of_week.length > 0) {
+    const daySet = new Set(day_of_week);
+    const cur = new Date(today + 'T12:00:00');
+    while (cur.toISOString().split('T')[0] <= endDateStr) {
+      if (daySet.has(cur.getDay())) allowedDates.add(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+  const hasDateFilter = allowedDates.size > 0;
+
+  const timeStartMin = time_start ? timeToMinutes(time_start) : 0;
+  const timeEndMin = time_end ? timeToMinutes(time_end) : 1440;
+  const minDur = min_duration || 30;
 
   for (const provider of providers) {
-    const providerSlots = db.prepare('SELECT * FROM provider_availability WHERE provider_id = ? AND date >= ? ORDER BY date, start_time').all(provider.id, today);
+    const providerTzOffset = getUtcOffsetMinutes(provider.timezone || 'America/New_York');
+    const providerSlots = db.prepare(
+      'SELECT * FROM provider_availability WHERE provider_id = ? AND date >= ? AND date <= ? ORDER BY date, start_time'
+    ).all(provider.id, today, endDateStr);
+    const providerBooked = getBookedRanges(req.user.id, 'provider', provider.id, today);
 
-    for (const slot of providerSlots) {
-      const dateMatch = !preferred_dates || preferred_dates.length === 0 || preferred_dates.includes(slot.date);
-      const timeMatch = (!preferred_time_start || slot.end_time > preferred_time_start) &&
-                        (!preferred_time_end || slot.start_time < preferred_time_end);
+    const tzDiffHours = Math.abs(clientTzOffset - providerTzOffset) / 60;
+    const tzProximityScore = tzDiffHours === 0 ? 10 : tzDiffHours <= 1 ? 5 : tzDiffHours <= 2 ? 2 : 0;
 
-      if (dateMatch && timeMatch) {
-        results.push({
-          provider: { id: provider.id, name: provider.name, specialty: provider.specialty },
-          date: slot.date,
-          start_time: slot.start_time > (preferred_time_start || '00:00') ? slot.start_time : preferred_time_start,
-          end_time: slot.end_time < (preferred_time_end || '23:59') ? slot.end_time : preferred_time_end
+    const slots = [];
+    for (const ps of providerSlots) {
+      if (hasDateFilter && !allowedDates.has(ps.date)) continue;
+
+      // Convert provider slot to UTC
+      const psStartUtc = toUtcMinutes(ps.start_time, providerTzOffset);
+      const psEndUtc = toUtcMinutes(ps.end_time, providerTzOffset);
+
+      // Clip to client's preferred time window (convert window to UTC using client tz)
+      const windowStartUtc = timeStartMin - clientTzOffset;
+      const windowEndUtc = timeEndMin - clientTzOffset;
+      const clippedStart = Math.max(psStartUtc, windowStartUtc);
+      const clippedEnd = Math.min(psEndUtc, windowEndUtc);
+      if (clippedEnd - clippedStart < minDur) continue;
+
+      // Subtract booked ranges
+      const bookedOnDate = [
+        ...clientBooked.filter(b => b.date === ps.date),
+        ...providerBooked.filter(b => b.date === ps.date)
+      ];
+      const free = subtractBooked(clippedStart, clippedEnd, bookedOnDate);
+
+      for (const seg of free) {
+        const dur = seg.end - seg.start;
+        if (dur < minDur) continue;
+        const displayStart = seg.start + providerTzOffset;
+        const displayEnd = seg.end + providerTzOffset;
+        const score = Math.floor(dur / 15) + tzProximityScore;
+        slots.push({
+          date: ps.date,
+          start_time: minutesToTime(displayStart),
+          end_time: minutesToTime(displayEnd),
+          duration_minutes: dur,
+          score
         });
       }
     }
+
+    if (slots.length > 0) {
+      slots.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+      providerResults.push({
+        provider: { id: provider.id, name: provider.name, specialty: provider.specialty, timezone: provider.timezone },
+        tz_proximity: tzDiffHours,
+        total_score: slots.reduce((s, sl) => s + sl.score, 0),
+        slots: slots.slice(0, 10) // Cap per provider
+      });
+    }
   }
 
-  results.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
-  res.json({ suggestions: results });
+  providerResults.sort((a, b) => b.total_score - a.total_score);
+
+  // Top picks: best single slot across all providers
+  const topPicks = providerResults
+    .flatMap(p => p.slots.slice(0, 3).map(s => ({ ...s, provider: p.provider })))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  res.json({ client: { id: client.id, name: client.name, timezone: client.timezone }, providers: providerResults, top_picks: topPicks });
 });
 
 // --- Smart Recurring Schedule Suggestion ---
