@@ -88,7 +88,7 @@ export default function CalendarAvailability({ availability, onChange }) {
   const [now, setNow] = useState(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(() => new Date());
-  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const pickerYear = pickerMonth.getFullYear();
   const [pickerHoverWeek, setPickerHoverWeek] = useState(-1);
   const pickerRef = useRef(null);
 
@@ -173,23 +173,18 @@ export default function CalendarAvailability({ availability, onChange }) {
   const handlePickerToday = () => {
     const t = new Date();
     setPickerMonth(new Date(t.getFullYear(), t.getMonth(), 1));
-    setPickerYear(t.getFullYear());
     goToday();
     setPickerOpen(false);
   };
 
   const togglePicker = () => {
     if (!pickerOpen) {
-      // Sync picker to current calendar position
       if (viewMode === 'week') {
         setPickerMonth(new Date(weekStart.getFullYear(), weekStart.getMonth(), 1));
-        setPickerYear(weekStart.getFullYear());
       } else if (viewMode === 'day') {
         setPickerMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-        setPickerYear(selectedDate.getFullYear());
       } else {
         setPickerMonth(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1));
-        setPickerYear(monthDate.getFullYear());
       }
     }
     setPickerOpen(!pickerOpen);
@@ -329,8 +324,8 @@ export default function CalendarAvailability({ availability, onChange }) {
                 <div className="cal-picker-year-header">
                   <span className="cal-picker-year-title">{pickerYear}</span>
                   <div className="cal-picker-year-nav">
-                    <button type="button" onClick={() => setPickerYear(pickerYear - 1)}>↑</button>
-                    <button type="button" onClick={() => setPickerYear(pickerYear + 1)}>↓</button>
+                    <button type="button" onClick={() => setPickerMonth(new Date(pickerYear - 1, pickerMonth.getMonth(), 1))}>↑</button>
+                    <button type="button" onClick={() => setPickerMonth(new Date(pickerYear + 1, pickerMonth.getMonth(), 1))}>↓</button>
                   </div>
                 </div>
                 <div className="cal-picker-year-grid">
