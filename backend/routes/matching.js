@@ -233,6 +233,137 @@ router.post('/realtime-suggest', (req, res) => {
   res.json({ suggestions: results });
 });
 
+// --- Recurring scheduling helpers ---
+function generateRecurringDates(startDate, cadence, count) {
+  const dates = [];
+  const d = new Date(startDate + 'T12:00:00');
+  for (let i = 0; i < count; i++) {
+    dates.push(d.toISOString().split('T')[0]);
+    if (cadence === 'weekly') d.setDate(d.getDate() + 7);
+    else if (cadence === 'biweekly') d.setDate(d.getDate() + 14);
+    else if (cadence === 'monthly') {
+      const targetDay = new Date(startDate + 'T12:00:00').getDate();
+      d.setMonth(d.getMonth() + 1);
+      // Clamp to last day of month if target day doesn't exist
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(targetDay, lastDay));
+    }
+  }
+  return dates;
+}
+
+function classifyOccurrence(userId, clientId, providerId, date, startTime, endTime, clientSlots, providerSlots, clientTzOffset, providerTzOffset) {
+  // Check conflicts with existing matches
+  const conflicts = db.prepare(
+    `SELECT m.*, c.name as client_name, p.name as provider_name
+     FROM matches m JOIN clients c ON m.client_id = c.id JOIN providers p ON m.provider_id = p.id
+     WHERE m.user_id = ? AND m.session_date = ? AND m.status IN ('pending', 'confirmed')
+     AND (m.client_id = ? OR m.provider_id = ?)
+     AND m.start_time < ? AND m.end_time > ?`
+  ).all(userId, date, clientId, providerId, endTime, startTime);
+
+  if (conflicts.length > 0) return { status: 'conflict', conflicts };
+
+  // Check if availability exists for this date
+  const clientHasAvail = clientSlots.some(s => s.date === date);
+  const providerHasAvail = providerSlots.some(s => s.date === date);
+
+  if (clientHasAvail && providerHasAvail) {
+    // Verify the time actually falls within available slots
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+    const clientCovered = clientSlots.some(s => s.date === date && timeToMinutes(s.start_time) <= startMin && timeToMinutes(s.end_time) >= endMin);
+    const providerCovered = providerSlots.some(s => s.date === date && timeToMinutes(s.start_time) <= startMin && timeToMinutes(s.end_time) >= endMin);
+    if (clientCovered && providerCovered) return { status: 'verified' };
+    return { status: 'partial', reason: !clientCovered ? 'Client not available at this time' : 'Provider not available at this time' };
+  }
+
+  return { status: 'unverified', reason: !clientHasAvail && !providerHasAvail ? 'No availability data for either party' : !clientHasAvail ? 'No client availability data' : 'No provider availability data' };
+}
+
+// Preview recurring series (dry run)
+router.post('/recurring/preview', (req, res) => {
+  const { client_id, provider_id, start_date, start_time, end_time, cadence, num_sessions } = req.body;
+  if (!client_id || !provider_id || !start_date || !start_time || !end_time || !cadence || !num_sessions) {
+    return res.status(400).json({ error: 'All fields required: client_id, provider_id, start_date, start_time, end_time, cadence, num_sessions' });
+  }
+  if (!['weekly', 'biweekly', 'monthly'].includes(cadence)) return res.status(400).json({ error: 'Cadence must be weekly, biweekly, or monthly' });
+  if (num_sessions < 2 || num_sessions > 52) return res.status(400).json({ error: 'num_sessions must be between 2 and 52' });
+
+  const client = db.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').get(client_id, req.user.id);
+  const provider = db.prepare('SELECT * FROM providers WHERE id = ? AND user_id = ?').get(provider_id, req.user.id);
+  if (!client || !provider) return res.status(404).json({ error: 'Client or provider not found' });
+
+  const dates = generateRecurringDates(start_date, cadence, num_sessions);
+  const clientSlots = db.prepare('SELECT * FROM client_availability WHERE client_id = ?').all(client_id);
+  const providerSlots = db.prepare('SELECT * FROM provider_availability WHERE provider_id = ?').all(provider_id);
+  const clientTzOffset = getUtcOffsetMinutes(client.timezone || 'America/New_York');
+  const providerTzOffset = getUtcOffsetMinutes(provider.timezone || 'America/New_York');
+
+  const occurrences = dates.map(date => {
+    const result = classifyOccurrence(req.user.id, client_id, provider_id, date, start_time, end_time, clientSlots, providerSlots, clientTzOffset, providerTzOffset);
+    return { date, start_time, end_time, ...result };
+  });
+
+  const summary = {
+    verified: occurrences.filter(o => o.status === 'verified').length,
+    unverified: occurrences.filter(o => o.status === 'unverified' || o.status === 'partial').length,
+    conflict: occurrences.filter(o => o.status === 'conflict').length,
+  };
+
+  res.json({ client, provider, cadence, occurrences, summary });
+});
+
+// Create recurring series
+router.post('/recurring', (req, res) => {
+  const { client_id, provider_id, start_date, start_time, end_time, cadence, num_sessions, notes, skip_conflicts } = req.body;
+  if (!client_id || !provider_id || !start_date || !start_time || !end_time || !cadence || !num_sessions) {
+    return res.status(400).json({ error: 'All fields required' });
+  }
+
+  const client = db.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').get(client_id, req.user.id);
+  const provider = db.prepare('SELECT * FROM providers WHERE id = ? AND user_id = ?').get(provider_id, req.user.id);
+  if (!client || !provider) return res.status(404).json({ error: 'Client or provider not found' });
+
+  const dates = generateRecurringDates(start_date, cadence, num_sessions);
+  const clientSlots = db.prepare('SELECT * FROM client_availability WHERE client_id = ?').all(client_id);
+  const providerSlots = db.prepare('SELECT * FROM provider_availability WHERE provider_id = ?').all(provider_id);
+  const clientTzOffset = getUtcOffsetMinutes(client.timezone || 'America/New_York');
+  const providerTzOffset = getUtcOffsetMinutes(provider.timezone || 'America/New_York');
+  const recurrenceGroup = `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const insertStmt = db.prepare(
+    'INSERT INTO matches (user_id, client_id, provider_id, session_date, start_time, end_time, notes, recurrence_group) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  );
+
+  const created = [];
+  const skipped = [];
+
+  const txn = db.transaction(() => {
+    for (const date of dates) {
+      const result = classifyOccurrence(req.user.id, client_id, provider_id, date, start_time, end_time, clientSlots, providerSlots, clientTzOffset, providerTzOffset);
+      if (result.status === 'conflict') {
+        if (skip_conflicts !== false) {
+          skipped.push({ date, reason: 'conflict' });
+          continue;
+        }
+      }
+      const r = insertStmt.run(req.user.id, client_id, provider_id, date, start_time, end_time, notes || null, recurrenceGroup);
+      created.push({ id: r.lastInsertRowid, date, status: result.status });
+    }
+  });
+  txn();
+
+  res.json({ recurrence_group: recurrenceGroup, created, skipped, total_requested: dates.length });
+});
+
+// Delete entire recurring series
+router.delete('/recurring/:groupId', (req, res) => {
+  const result = db.prepare('DELETE FROM matches WHERE recurrence_group = ? AND user_id = ?').run(req.params.groupId, req.user.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Series not found' });
+  res.json({ message: `Deleted ${result.changes} sessions`, deleted: result.changes });
+});
+
 // Get all matches
 router.get('/', (req, res) => {
   const matches = db.prepare(`
@@ -281,8 +412,8 @@ router.post('/', (req, res) => {
   }
 
   const result = db.prepare(
-    'INSERT INTO matches (user_id, client_id, provider_id, session_date, start_time, end_time, notes) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(req.user.id, client_id, provider_id, session_date, start_time, end_time, notes || null);
+    'INSERT INTO matches (user_id, client_id, provider_id, session_date, start_time, end_time, notes, recurrence_group) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(req.user.id, client_id, provider_id, session_date, start_time, end_time, notes || null, null);
 
   res.json({ id: result.lastInsertRowid, message: 'Session scheduled' });
 });

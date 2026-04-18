@@ -68,6 +68,7 @@ db.exec(`
     end_time TEXT NOT NULL,
     status TEXT DEFAULT 'pending',
     notes TEXT,
+    recurrence_group TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (client_id) REFERENCES clients(id),

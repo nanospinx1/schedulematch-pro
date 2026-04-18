@@ -108,7 +108,10 @@ export default function Matching() {
                     <tr key={m.id}>
                       <td>{m.client_name}</td>
                       <td>{m.provider_name}</td>
-                      <td>{formatDate(m.session_date)}</td>
+                      <td>
+                        {formatDate(m.session_date)}
+                        {m.recurrence_group && <span style={{ marginLeft: 6, background: '#ede9fe', color: '#6d28d9', padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600 }}>Series</span>}
+                      </td>
                       <td>{formatTime12(m.start_time)} – {formatTime12(m.end_time)}</td>
                       <td>
                         <select className="form-select" value={m.status} onChange={e => handleStatusChange(m.id, e.target.value)} style={{ width: 'auto', padding: '4px 8px', fontSize: 13 }}>
