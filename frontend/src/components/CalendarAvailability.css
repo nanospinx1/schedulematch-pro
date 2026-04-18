@@ -414,7 +414,7 @@
   border: 1px solid var(--gray-200);
   border-radius: 8px;
   overflow: auto;
-  max-height: 498px;
+  max-height: 532px;
   background: white;
 }
 

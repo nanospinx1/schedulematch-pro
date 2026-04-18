@@ -116,7 +116,7 @@ export default function CalendarAvailability({ availability, onChange }) {
   useEffect(() => {
     if (gridWrapperRef.current) {
       const rowHeight = 24;
-      gridWrapperRef.current.scrollTop = (8 * 2) * rowHeight;
+      gridWrapperRef.current.scrollTop = (7.5 * 2) * rowHeight;
     }
   }, []);
 
