@@ -7,30 +7,44 @@
 .cal-toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+  padding: 6px 10px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
 }
 
+/* Navigation group: ‹ Today › as a connected pill */
 .cal-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .cal-nav-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--gray-300);
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-right: 1px solid var(--gray-200);
   background: white;
-  border-radius: 6px;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--gray-600);
+  color: var(--gray-500);
   transition: all 0.15s;
+}
+
+.cal-nav-btn:last-child {
+  border-right: none;
+  border-left: 1px solid var(--gray-200);
 }
 
 .cal-nav-btn:hover {
@@ -39,33 +53,31 @@
 }
 
 .cal-today-btn {
-  padding: 4px 12px;
-  border: 1px solid var(--gray-300);
+  height: 36px;
+  padding: 0 14px;
+  border: none;
   background: white;
-  border-radius: 6px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   color: var(--gray-700);
   font-family: inherit;
   transition: all 0.15s;
+  letter-spacing: 0.2px;
 }
 
 .cal-today-btn-active {
   background: var(--primary);
-  border-color: var(--primary);
   color: white;
 }
 
 .cal-today-btn-active:hover {
   background: var(--primary-hover);
-  border-color: var(--primary-hover);
   color: white;
 }
 
 .cal-today-btn-away {
   background: white;
-  border-color: var(--primary);
   color: var(--primary);
   animation: cal-pulse 2s ease-in-out infinite;
 }
@@ -91,13 +103,14 @@
 }
 
 .cal-title-btn {
-  font-size: 16px;
+  height: 36px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--gray-800);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 4px 10px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0 12px;
   cursor: pointer;
   font-family: inherit;
   display: flex;
@@ -113,7 +126,7 @@
 
 .cal-title-chevron {
   font-size: 10px;
-  color: var(--gray-500);
+  color: var(--gray-400);
 }
 
 .cal-picker-dropdown {
@@ -319,20 +332,22 @@
 /* View toggle button group */
 .cal-view-toggle {
   display: flex;
-  border: 1px solid var(--gray-300);
-  border-radius: 6px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
   overflow: hidden;
 }
 
 .cal-view-btn {
-  padding: 4px 14px;
+  height: 36px;
+  padding: 0 14px;
   border: none;
-  border-right: 1px solid var(--gray-300);
+  border-right: 1px solid var(--gray-200);
   background: white;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  color: var(--gray-600);
+  color: var(--gray-500);
   font-family: inherit;
   transition: all 0.15s;
 }
@@ -357,9 +372,10 @@
 }
 
 .cal-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--gray-400);
   margin-left: auto;
+  font-style: italic;
 }
 
 /* Grid wrapper for scroll */
