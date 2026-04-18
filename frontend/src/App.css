@@ -553,16 +553,13 @@ tr:hover td { background: var(--gray-50); }
 }
 
 /* Dual calendar layout in modal */
-.cal-modal-dual .cal-container {
+/* Zero out container/toolbar margins inside modal for consistent spacing */
+.modal-fullscreen .cal-container {
   margin-top: 0;
 }
 
-.cal-modal-dual .cal-toolbar {
+.modal-fullscreen .cal-toolbar {
   margin-bottom: 6px;
-}
-
-.cal-modal-grids .cal-container {
-  margin-top: 0;
 }
 
 .cal-modal-dual {
