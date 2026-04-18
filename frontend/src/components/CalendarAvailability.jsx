@@ -653,7 +653,7 @@ export default function CalendarAvailability({
       {hoveredSlot && (
         <div className="cal-slot-tooltip" style={{ left: hoveredSlot.x + 12, top: hoveredSlot.y + 12 }}>
           <div className="cal-slot-tooltip-time">{formatTime12(hoveredSlot.startTime)} – {formatTime12(hoveredSlot.endTime)}</div>
-          {hoveredSlot.note && <div className="cal-slot-tooltip-note">📝 {hoveredSlot.note}</div>}
+          {hoveredSlot.note && <div className="cal-slot-tooltip-note">{hoveredSlot.note}</div>}
         </div>
       )}
 
