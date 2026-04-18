@@ -221,12 +221,18 @@ export default function Calendar() {
                 )
               ) : (
                 /* Single calendar */
-                <CalendarAvailability
-                  {...sharedNav}
-                  availability={(clientData || providerData)?.availability || []}
-                  onChange={clientData ? handleClientChange : handleProviderChange}
-                  slotClassName={providerData && !clientData ? 'cal-slot-provider' : undefined}
-                />
+                <div>
+                  <div className="cal-merged-legend">
+                    {clientData && <span className="cal-merged-legend-item cal-merged-legend-client">👤 {clientData.name}</span>}
+                    {providerData && <span className="cal-merged-legend-item cal-merged-legend-provider">🏥 {providerData.name}</span>}
+                  </div>
+                  <CalendarAvailability
+                    {...sharedNav}
+                    availability={(clientData || providerData)?.availability || []}
+                    onChange={clientData ? handleClientChange : handleProviderChange}
+                    slotClassName={providerData && !clientData ? 'cal-slot-provider' : undefined}
+                  />
+                </div>
               )}
             </div>
           </div>
