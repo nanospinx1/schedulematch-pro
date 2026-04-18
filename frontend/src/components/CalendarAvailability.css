@@ -513,20 +513,20 @@
 }
 
 .cal-cell:hover {
-  background: rgba(79, 70, 229, 0.04);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .cal-cell-drag {
-  background: rgba(79, 70, 229, 0.15) !important;
+  background: rgba(79, 70, 229, 0.12) !important;
 }
 
 .cal-cell-offhours {
-  background: rgba(0, 0, 0, 0.03);
+  background: #f9fafb;
 }
 
 /* Availability slots */
 .cal-slot {
-  background: linear-gradient(135deg, #818cf8, #6366f1);
+  background: #4f46e5;
   border-radius: 4px;
   margin: 1px 3px;
   padding: 2px 6px;
@@ -535,12 +535,13 @@
   z-index: 1;
   position: relative;
   transition: all 0.15s;
-  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-left: 3px solid #3730a3;
 }
 
 .cal-slot:hover {
-  background: linear-gradient(135deg, #f87171, #ef4444);
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.1);
 }
 
 .cal-slot-delete {
@@ -551,7 +552,7 @@
   height: 16px;
   border: none;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.3);
   color: white;
   font-size: 10px;
   line-height: 1;
@@ -568,21 +569,20 @@
 }
 
 .cal-slot-delete:hover {
-  background: rgba(0, 0, 0, 0.7);
+  background: #dc2626;
   transform: scale(1.15);
 }
 
 .cal-slot-overlay {
-  background: linear-gradient(135deg, #34d399, #059669);
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.3);
+  background: #059669;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-left: 3px solid #047857;
   cursor: default;
-  opacity: 0.85;
 }
 
 .cal-slot-overlay:hover {
-  background: linear-gradient(135deg, #f87171, #ef4444);
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-  transform: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.1);
 }
 
 /* Merged view: slots side by side */
@@ -599,35 +599,29 @@
 .cal-slot-overlap {
   background: repeating-linear-gradient(
     -45deg,
-    #818cf8,
-    #818cf8 4px,
-    #34d399 4px,
-    #34d399 8px
+    #4f46e5,
+    #4f46e5 4px,
+    #059669 4px,
+    #059669 8px
   );
-  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3), 0 1px 3px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   cursor: default;
-  border: 1px dashed rgba(255, 255, 255, 0.6);
+  border-left: 3px solid #374151;
 }
 
 .cal-slot-overlap:hover {
-  background: repeating-linear-gradient(
-    -45deg,
-    #818cf8,
-    #818cf8 4px,
-    #34d399 4px,
-    #34d399 8px
-  );
-  transform: none;
+  filter: brightness(1.1);
 }
 
 .cal-slot-provider {
-  background: linear-gradient(135deg, #34d399, #059669);
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.3);
+  background: #059669;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-left: 3px solid #047857;
 }
 
 .cal-slot-provider:hover {
-  background: linear-gradient(135deg, #f87171, #ef4444);
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.1);
 }
 
 .cal-slot-time {
@@ -740,8 +734,8 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #ef4444;
-  box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+  background: #dc2626;
+  box-shadow: 0 0 3px rgba(220, 38, 38, 0.4);
 }
 
 .cal-now-dot {
@@ -750,6 +744,6 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ef4444;
+  background: #dc2626;
   transform: translateY(-3px);
 }
