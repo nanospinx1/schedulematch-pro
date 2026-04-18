@@ -112,12 +112,11 @@ export default function CalendarAvailability({ availability, onChange }) {
   const gridWrapperRef = useRef(null);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-  // Auto-scroll to 8 AM on mount
+  // Auto-scroll to 8 AM on mount (offset by header height so 8 AM is visible)
   useEffect(() => {
     if (gridWrapperRef.current) {
       const rowHeight = 24;
-      const headerHeight = 40;
-      gridWrapperRef.current.scrollTop = headerHeight + (8 * 2) * rowHeight;
+      gridWrapperRef.current.scrollTop = (8 * 2) * rowHeight;
     }
   }, []);
 
@@ -302,6 +301,18 @@ export default function CalendarAvailability({ availability, onChange }) {
             {viewContainsToday ? '● Today' : '↩ Today'}
           </button>
           <button type="button" className="cal-nav-btn" onClick={handleNext}>›</button>
+          <div className="cal-view-toggle">
+            {['day', 'week', 'month'].map(v => (
+              <button
+                key={v}
+                type="button"
+                className={`cal-view-btn ${viewMode === v ? 'cal-view-btn-active' : ''}`}
+                onClick={() => setViewMode(v)}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="cal-title-wrapper" ref={pickerRef}>
           <button type="button" className="cal-title-btn" onClick={togglePicker}>
@@ -377,18 +388,6 @@ export default function CalendarAvailability({ availability, onChange }) {
               </div>
             </div>
           )}
-        </div>
-        <div className="cal-view-toggle">
-          {['day', 'week', 'month'].map(v => (
-            <button
-              key={v}
-              type="button"
-              className={`cal-view-btn ${viewMode === v ? 'cal-view-btn-active' : ''}`}
-              onClick={() => setViewMode(v)}
-            >
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
         </div>
         <div className="cal-hint">Click &amp; drag to add • Click slot to remove</div>
         <div className="cal-tz-wrapper">

@@ -16,19 +16,15 @@
 .cal-nav {
   display: flex;
   align-items: center;
-  gap: 0;
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  overflow: hidden;
+  gap: 6px;
 }
 
 .cal-nav-btn {
   width: 36px;
   height: 36px;
-  border: none;
-  border-right: 1px solid var(--gray-200);
+  border: 1px solid var(--gray-200);
   background: white;
+  border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
   display: flex;
@@ -39,8 +35,7 @@
 }
 
 .cal-nav-btn:last-child {
-  border-right: none;
-  border-left: 1px solid var(--gray-200);
+  border-right: 1px solid var(--gray-200);
 }
 
 .cal-nav-btn:hover {
@@ -51,8 +46,9 @@
 .cal-today-btn {
   height: 36px;
   padding: 0 14px;
-  border: none;
+  border: 1px solid var(--gray-200);
   background: white;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
