@@ -98,6 +98,43 @@ function formatTime12(time24) {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
+// Get timezone offset difference in minutes between browser tz and target tz for a given date
+function getTzOffsetMinutes(dateStr, targetTz) {
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (targetTz === browserTz) return 0;
+  // Create a date at noon to avoid DST edge cases
+  const refDate = new Date(`${dateStr}T12:00:00`);
+  // Get offset for browser timezone
+  const browserParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: browserTz, hour: 'numeric', minute: 'numeric', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(refDate);
+  const targetParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: targetTz, hour: 'numeric', minute: 'numeric', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(refDate);
+  const getVal = (parts, type) => parseInt(parts.find(p => p.type === type)?.value || '0');
+  const browserMin = getVal(browserParts, 'hour') * 60 + getVal(browserParts, 'minute');
+  const targetMin = getVal(targetParts, 'hour') * 60 + getVal(targetParts, 'minute');
+  // Account for date difference (e.g. crossing midnight)
+  const browserDay = getVal(browserParts, 'day');
+  const targetDay = getVal(targetParts, 'day');
+  let diff = (targetMin - browserMin) + (targetDay - browserDay) * 1440;
+  return diff;
+}
+
+// Convert a "HH:MM" time by applying a minute offset, returns { time: "HH:MM", dayOffset: number }
+function offsetTime(time, offsetMinutes) {
+  const [h, m] = time.split(':').map(Number);
+  let totalMin = h * 60 + m + offsetMinutes;
+  let dayOffset = 0;
+  while (totalMin < 0) { totalMin += 1440; dayOffset--; }
+  while (totalMin >= 1440) { totalMin -= 1440; dayOffset++; }
+  const nh = Math.floor(totalMin / 60);
+  const nm = totalMin % 60;
+  return { time: `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`, dayOffset };
+}
+
 export default function CalendarAvailability({
   availability, onChange, hideToolbar, hideGrid,
   overlaySlots, onOverlayChange, slotClassName,
@@ -162,24 +199,49 @@ export default function CalendarAvailability({
   const weekDates = useMemo(() => getWeekDates(weekStart), [weekStart]);
   const totalRows = (HOURS_END - HOURS_START) * 2;
 
+  // Timezone offset in minutes from browser tz to selected tz
+  const tzOffsetMin = useMemo(() => {
+    const refDate = viewMode === 'day' ? toDateStr(selectedDate) : toDateStr(weekStart);
+    return getTzOffsetMinutes(refDate, timezone);
+  }, [timezone, viewMode, selectedDate, weekStart]);
+
+  // Convert slots to selected timezone, shifting times and possibly dates
+  const convertSlotsToTz = (slots) => {
+    if (tzOffsetMin === 0) return slots;
+    return slots.map(slot => {
+      const startAdj = offsetTime(slot.start_time, tzOffsetMin);
+      const endAdj = offsetTime(slot.end_time, tzOffsetMin);
+      // If the offset shifts to a different day, adjust the date
+      const origDate = new Date(slot.date + 'T12:00:00');
+      if (startAdj.dayOffset !== 0) {
+        const newDate = new Date(origDate);
+        newDate.setDate(newDate.getDate() + startAdj.dayOffset);
+        return { ...slot, date: toDateStr(newDate), start_time: startAdj.time, end_time: endAdj.time };
+      }
+      return { ...slot, start_time: startAdj.time, end_time: endAdj.time };
+    });
+  };
+
   const slotsByDate = useMemo(() => {
+    const converted = convertSlotsToTz(availability || []);
     const map = {};
-    (availability || []).forEach((slot, idx) => {
+    converted.forEach((slot, idx) => {
       if (!map[slot.date]) map[slot.date] = [];
       map[slot.date].push({ ...slot, _idx: idx });
     });
     return map;
-  }, [availability]);
+  }, [availability, tzOffsetMin]);
 
   const overlayByDate = useMemo(() => {
     if (!overlaySlots?.length) return {};
+    const converted = convertSlotsToTz(overlaySlots);
     const map = {};
-    overlaySlots.forEach((slot, idx) => {
+    converted.forEach((slot, idx) => {
       if (!map[slot.date]) map[slot.date] = [];
       map[slot.date].push({ ...slot, _oidx: idx });
     });
     return map;
-  }, [overlaySlots]);
+  }, [overlaySlots, tzOffsetMin]);
 
   const monthDays = useMemo(() => getMonthCalendarDays(monthDate.getFullYear(), monthDate.getMonth()), [monthDate]);
 
@@ -277,7 +339,17 @@ export default function CalendarAvailability({
     const start_time = rowToTime(fromRow);
     const end_time = rowToTime(toRow + 1);
 
-    const newSlot = { date, start_time, end_time };
+    // Convert displayed tz time back to browser tz for storage
+    const startStore = offsetTime(start_time, -tzOffsetMin);
+    const endStore = offsetTime(end_time, -tzOffsetMin);
+    let storeDate = date;
+    if (startStore.dayOffset !== 0) {
+      const d = new Date(date + 'T12:00:00');
+      d.setDate(d.getDate() + startStore.dayOffset);
+      storeDate = toDateStr(d);
+    }
+
+    const newSlot = { date: storeDate, start_time: startStore.time, end_time: endStore.time };
     onChange([...availability, newSlot]);
     setDragging(null);
   };
@@ -291,7 +363,16 @@ export default function CalendarAvailability({
     }
     const start_time = rowToTime(row);
     const end_time = rowToTime(row + 1);
-    onChange([...availability, { date, start_time, end_time }]);
+    // Convert displayed tz time back to browser tz for storage
+    const startStore = offsetTime(start_time, -tzOffsetMin);
+    const endStore = offsetTime(end_time, -tzOffsetMin);
+    let storeDate = date;
+    if (startStore.dayOffset !== 0) {
+      const d = new Date(date + 'T12:00:00');
+      d.setDate(d.getDate() + startStore.dayOffset);
+      storeDate = toDateStr(d);
+    }
+    onChange([...availability, { date: storeDate, start_time: startStore.time, end_time: endStore.time }]);
   };
 
   const removeSlot = (idx) => {
@@ -360,9 +441,15 @@ export default function CalendarAvailability({
     if (todayDayIdx === -1) return null;
     const h = now.getHours();
     const m = now.getMinutes();
-    const row = (h - HOURS_START) * 2 + (m / 30);
+    // Apply timezone offset to current time
+    const nowTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const adjusted = offsetTime(nowTime, tzOffsetMin);
+    const [ah, am] = adjusted.time.split(':').map(Number);
+    const row = (ah - HOURS_START) * 2 + (am / 30);
+    // If offset shifts to a different day, hide the indicator
+    if (adjusted.dayOffset !== 0) return null;
     return { dayIdx: todayDayIdx, row };
-  }, [gridDates, todayStr, now, viewMode]);
+  }, [gridDates, todayStr, now, viewMode, tzOffsetMin]);
 
   return (
     <div className="cal-container" onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
