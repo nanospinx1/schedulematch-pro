@@ -242,6 +242,8 @@ export default function AIAssistant() {
   const [isThinking, setThinking] = useState(false);
   const [toolCalls, setTools]     = useState([]);
   const [ctx, setCtx]             = useState({ clientId:null, clientName:null, providerId:null, providerName:null, lastResults:null });
+  const [useRealAI, setUseRealAI] = useState(false);
+  const llmHistory = useRef([]);
   const chatEnd = useRef(null);
   const inputEl = useRef(null);
 
@@ -262,6 +264,8 @@ export default function AIAssistant() {
         content: "Hi! I\u2019m your AI scheduling assistant. I can help you with anything:\n\n\u2022 **Manage clients & providers** \u2014 *\"Add a new client named John Smith, email john@test.com, Eastern timezone\"*\n\u2022 **View calendars** \u2014 *\"Show Amanda Foster\u2019s availability\"*\n\u2022 **Compare schedules** \u2014 *\"Compare Amanda Foster and Dr. Khan\u2019s calendars\"*\n\u2022 **Find & book sessions** \u2014 *\"Amanda needs therapy on Tuesdays, 1 hour\"*\n\u2022 **View sessions** \u2014 *\"Show my upcoming sessions\"*\n\u2022 **Get counts** \u2014 *\"How many clients do I have?\"*\n\nJust type what you need!",
       }]);
     });
+    // Check if real AI backend is available
+    api.aiTools().then(() => setUseRealAI(true)).catch(() => setUseRealAI(false));
   }, [refreshData]);
 
   useEffect(()=>{ chatEnd.current?.scrollIntoView({ behavior:'smooth' }); },[messages,toolCalls,isThinking]);
@@ -537,12 +541,41 @@ export default function AIAssistant() {
     setThinking(false);
   }, [ctx, refreshData, add]);
 
+  /* ── real AI backend call ── */
+  const agentReal = useCallback(async (text) => {
+    llmHistory.current.push({ role: 'user', content: text });
+    try {
+      const res = await api.aiChat(text, llmHistory.current.slice(-20));
+      // Animate tool calls from the backend log
+      if (res.tool_calls && res.tool_calls.length) {
+        for (const tc of res.tool_calls) {
+          setTools(p => [...p.map(s => ({ ...s, status: 'done' })), { label: `${tc.name}${tc.summary ? ' → ' + tc.summary : ''}`, status: 'running' }]);
+          await sleep(350);
+        }
+        setTools(p => p.map(s => ({ ...s, status: 'done' })));
+        await sleep(300);
+        setTools([]);
+      }
+      const reply = res.response || 'I processed your request but got no response.';
+      llmHistory.current.push({ role: 'assistant', content: reply });
+      add({ role: 'assistant', type: 'text', content: reply });
+    } catch (e) {
+      if (e.status === 503) {
+        setUseRealAI(false);
+        agent(text);
+        return;
+      }
+      add({ role: 'assistant', type: 'text', content: `⚠️ AI error: ${e.data?.error || e.message || 'Unknown error'}` });
+    }
+    setThinking(false);
+  }, [add, agent]);
+
   const handleSend = async () => {
     const t=input.trim(); if(!t||isThinking) return;
     setInput(''); add({role:'user',type:'text',content:t});
     setThinking(true); setTools([]);
     await sleep(250);
-    agent(t);
+    if (useRealAI) agentReal(t); else agent(t);
   };
 
   const handleBook = (slot, providerId) => {
@@ -606,7 +639,7 @@ export default function AIAssistant() {
           </div>
           <div>
             <h2 style={{margin:0,fontSize:18}}>AI Assistant</h2>
-            <span style={{fontSize:12,color:'#6b7280'}}>Your all-in-one scheduling command center</span>
+            <span style={{fontSize:12,color:'#6b7280'}}>Your all-in-one scheduling command center {useRealAI ? <span title="Connected to OpenAI" style={{color:'#16a34a'}}>● GPT</span> : <span title="Mock mode — set OPENAI_API_KEY for real AI" style={{color:'#d97706'}}>● Demo</span>}</span>
           </div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -615,6 +648,7 @@ export default function AIAssistant() {
           <button className="btn btn-sm btn-outline" onClick={()=>{
             setMessages([{role:'assistant',type:'text',content:"Session cleared! What would you like to do next?",ts:new Date()}]);
             setCtx({clientId:null,clientName:null,providerId:null,providerName:null,lastResults:null});
+            llmHistory.current = [];
           }}>New Session</button>
         </div>
       </div>

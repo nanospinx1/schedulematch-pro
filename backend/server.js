@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
@@ -12,6 +13,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/clients', require('./routes/clients'));
 app.use('/api/providers', require('./routes/providers'));
 app.use('/api/matching', require('./routes/matching'));
+app.use('/api/ai', require('./middleware/auth').authenticateToken, require('./routes/ai'));
 app.use('/api/communications', require('./routes/communications'));
 app.use('/api/preferences', require('./routes/preferences'));
 

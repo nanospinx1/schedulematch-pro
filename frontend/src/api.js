@@ -60,4 +60,8 @@ export const api = {
   getPreferences: () => request('/preferences'),
   addPreference: (text) => request('/preferences', { method: 'POST', body: JSON.stringify({ preference_text: text }) }),
   deletePreference: (id) => request(`/preferences/${id}`, { method: 'DELETE' }),
+
+  // AI Assistant
+  aiChat: (message, history) => request('/ai/chat', { method: 'POST', body: JSON.stringify({ message, history }) }),
+  aiTools: () => request('/ai/tools'),
 };
