@@ -653,7 +653,7 @@
 }
 
 .cal-slot-has-note {
-  cursor: pointer;
+  cursor: default;
 }
 
 /* Custom hover tooltip */
