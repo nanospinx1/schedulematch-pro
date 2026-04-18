@@ -187,6 +187,12 @@ export default function Calendar() {
                 )}
               </div>
 
+              {/* Name legend — always in same position */}
+              <div className="cal-merged-legend">
+                {clientData && <span className="cal-merged-legend-item cal-merged-legend-client">■ 👤 {clientData.name}</span>}
+                {providerData && <span className="cal-merged-legend-item cal-merged-legend-provider">■ 🏥 {providerData.name}</span>}
+              </div>
+
               {hasBoth ? (
                 sideBySide ? (
                   /* Side-by-side grids */
@@ -194,45 +200,31 @@ export default function Calendar() {
                     <CalendarAvailability {...sharedNav} hideGrid availability={[]} onChange={() => {}} />
                     <div className="cal-modal-grids">
                       <div className="cal-modal-grid-panel">
-                        <div className="cal-modal-grid-label cal-modal-grid-label-client">👤 {clientData.name}</div>
                         <CalendarAvailability {...sharedNav} hideToolbar availability={clientData.availability || []} onChange={handleClientChange} />
                       </div>
                       <div className="cal-modal-grid-panel">
-                        <div className="cal-modal-grid-label cal-modal-grid-label-provider">🏥 {providerData.name}</div>
                         <CalendarAvailability {...sharedNav} hideToolbar slotClassName="cal-slot-provider" availability={providerData.availability || []} onChange={handleProviderChange} />
                       </div>
                     </div>
                   </div>
                 ) : (
                   /* Merged view: both on one calendar */
-                  <div>
-                    <div className="cal-merged-legend">
-                      <span className="cal-merged-legend-item cal-merged-legend-client">■ 👤 {clientData.name}</span>
-                      <span className="cal-merged-legend-item cal-merged-legend-provider">■ 🏥 {providerData.name}</span>
-                    </div>
-                    <CalendarAvailability
-                      {...sharedNav}
-                      availability={clientData.availability || []}
-                      onChange={handleClientChange}
-                      overlaySlots={providerData.availability || []}
-                      onOverlayChange={handleProviderChange}
-                    />
-                  </div>
+                  <CalendarAvailability
+                    {...sharedNav}
+                    availability={clientData.availability || []}
+                    onChange={handleClientChange}
+                    overlaySlots={providerData.availability || []}
+                    onOverlayChange={handleProviderChange}
+                  />
                 )
               ) : (
                 /* Single calendar */
-                <div>
-                  <div className="cal-merged-legend">
-                    {clientData && <span className="cal-merged-legend-item cal-merged-legend-client">👤 {clientData.name}</span>}
-                    {providerData && <span className="cal-merged-legend-item cal-merged-legend-provider">🏥 {providerData.name}</span>}
-                  </div>
-                  <CalendarAvailability
-                    {...sharedNav}
-                    availability={(clientData || providerData)?.availability || []}
-                    onChange={clientData ? handleClientChange : handleProviderChange}
-                    slotClassName={providerData && !clientData ? 'cal-slot-provider' : undefined}
-                  />
-                </div>
+                <CalendarAvailability
+                  {...sharedNav}
+                  availability={(clientData || providerData)?.availability || []}
+                  onChange={clientData ? handleClientChange : handleProviderChange}
+                  slotClassName={providerData && !clientData ? 'cal-slot-provider' : undefined}
+                />
               )}
             </div>
           </div>
