@@ -129,6 +129,7 @@ export default function CalendarAvailability({
   const [pickerHoverWeek, setPickerHoverWeek] = useState(-1);
   const pickerRef = useRef(null);
   const gridWrapperRef = useRef(null);
+  const [editingNote, setEditingNote] = useState(null); // { idx, isOverlay, note }
 
   // Auto-scroll to 8 AM on mount (offset by header height so 8 AM is visible)
   useEffect(() => {
@@ -295,6 +296,27 @@ export default function CalendarAvailability({
 
   const removeOverlaySlot = (idx) => {
     if (onOverlayChange) onOverlayChange(overlaySlots.filter((_, i) => i !== idx));
+  };
+
+  const handleSlotClick = (idx, isOverlay) => {
+    const slots = isOverlay ? overlaySlots : availability;
+    const currentNote = slots[idx]?.note || '';
+    setEditingNote({ idx, isOverlay, note: currentNote });
+  };
+
+  const saveNote = () => {
+    if (!editingNote) return;
+    const { idx, isOverlay, note } = editingNote;
+    if (isOverlay) {
+      if (onOverlayChange) {
+        const updated = overlaySlots.map((s, i) => i === idx ? { ...s, note } : s);
+        onOverlayChange(updated);
+      }
+    } else {
+      const updated = availability.map((s, i) => i === idx ? { ...s, note } : s);
+      onChange(updated);
+    }
+    setEditingNote(null);
   };
 
   const todayStr = toDateStr(new Date());
@@ -548,14 +570,16 @@ export default function CalendarAvailability({
                 return (
                   <div
                     key={`s-${slot._idx}`}
-                    className={`cal-slot${slotClassName ? ` ${slotClassName}` : ''}${hasMerged ? ' cal-slot-left' : ''}`}
+                    className={`cal-slot${slotClassName ? ` ${slotClassName}` : ''}${hasMerged ? ' cal-slot-left' : ''}${slot.note ? ' cal-slot-has-note' : ''}`}
                     style={{
                       gridColumn: dayIdx + 2,
                       gridRow: `${startRow + 2} / span ${span}`,
                     }}
-                    title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
+                    title={slot.note ? `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\n📝 ${slot.note}` : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
+                    onClick={() => handleSlotClick(slot._idx, false)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                    {slot.note && <span className="cal-slot-note-icon">📝</span>}
                     <button
                       type="button"
                       className="cal-slot-delete"
@@ -579,11 +603,13 @@ export default function CalendarAvailability({
                 return (
                   <div
                     key={`o-${slot._oidx}`}
-                    className="cal-slot cal-slot-overlay cal-slot-right"
+                    className={`cal-slot cal-slot-overlay cal-slot-right${slot.note ? ' cal-slot-has-note' : ''}`}
                     style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
-                    title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
+                    title={slot.note ? `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\n📝 ${slot.note}` : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
+                    onClick={() => handleSlotClick(slot._oidx, true)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                    {slot.note && <span className="cal-slot-note-icon">📝</span>}
                     {onOverlayChange && (
                       <button
                         type="button"
@@ -613,6 +639,30 @@ export default function CalendarAvailability({
           </div>
         </div>
       ))}
+
+      {/* Note editing popup */}
+      {editingNote && (
+        <div className="cal-note-overlay" onClick={() => setEditingNote(null)}>
+          <div className="cal-note-popup" onClick={e => e.stopPropagation()}>
+            <div className="cal-note-header">
+              <span>📝 Slot Note</span>
+              <button className="cal-note-close" onClick={() => setEditingNote(null)}>✕</button>
+            </div>
+            <textarea
+              className="cal-note-input"
+              value={editingNote.note}
+              onChange={e => setEditingNote({ ...editingNote, note: e.target.value })}
+              placeholder="Add a note for this slot..."
+              autoFocus
+              rows={3}
+            />
+            <div className="cal-note-actions">
+              <button className="cal-note-cancel" onClick={() => setEditingNote(null)}>Cancel</button>
+              <button className="cal-note-save" onClick={saveNote}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,9 +21,9 @@ router.post('/', (req, res) => {
   const clientId = result.lastInsertRowid;
 
   if (availability && Array.isArray(availability)) {
-    const stmt = db.prepare('INSERT INTO client_availability (client_id, date, start_time, end_time) VALUES (?, ?, ?, ?)');
+    const stmt = db.prepare('INSERT INTO client_availability (client_id, date, start_time, end_time, note) VALUES (?, ?, ?, ?, ?)');
     for (const slot of availability) {
-      stmt.run(clientId, slot.date, slot.start_time, slot.end_time);
+      stmt.run(clientId, slot.date, slot.start_time, slot.end_time, slot.note || '');
     }
   }
 
@@ -49,9 +49,9 @@ router.put('/:id', (req, res) => {
 
   if (availability && Array.isArray(availability)) {
     db.prepare('DELETE FROM client_availability WHERE client_id = ?').run(client.id);
-    const stmt = db.prepare('INSERT INTO client_availability (client_id, date, start_time, end_time) VALUES (?, ?, ?, ?)');
+    const stmt = db.prepare('INSERT INTO client_availability (client_id, date, start_time, end_time, note) VALUES (?, ?, ?, ?, ?)');
     for (const slot of availability) {
-      stmt.run(client.id, slot.date, slot.start_time, slot.end_time);
+      stmt.run(client.id, slot.date, slot.start_time, slot.end_time, slot.note || '');
     }
   }
 

@@ -21,9 +21,9 @@ router.post('/', (req, res) => {
   const providerId = result.lastInsertRowid;
 
   if (availability && Array.isArray(availability)) {
-    const stmt = db.prepare('INSERT INTO provider_availability (provider_id, date, start_time, end_time) VALUES (?, ?, ?, ?)');
+    const stmt = db.prepare('INSERT INTO provider_availability (provider_id, date, start_time, end_time, note) VALUES (?, ?, ?, ?, ?)');
     for (const slot of availability) {
-      stmt.run(providerId, slot.date, slot.start_time, slot.end_time);
+      stmt.run(providerId, slot.date, slot.start_time, slot.end_time, slot.note || '');
     }
   }
 
@@ -49,9 +49,9 @@ router.put('/:id', (req, res) => {
 
   if (availability && Array.isArray(availability)) {
     db.prepare('DELETE FROM provider_availability WHERE provider_id = ?').run(provider.id);
-    const stmt = db.prepare('INSERT INTO provider_availability (provider_id, date, start_time, end_time) VALUES (?, ?, ?, ?)');
+    const stmt = db.prepare('INSERT INTO provider_availability (provider_id, date, start_time, end_time, note) VALUES (?, ?, ?, ?, ?)');
     for (const slot of availability) {
-      stmt.run(provider.id, slot.date, slot.start_time, slot.end_time);
+      stmt.run(provider.id, slot.date, slot.start_time, slot.end_time, slot.note || '');
     }
   }
 

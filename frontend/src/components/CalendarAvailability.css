@@ -641,6 +641,111 @@
   white-space: nowrap;
 }
 
+.cal-slot-note-icon {
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+.cal-slot-has-note {
+  cursor: pointer;
+}
+
+/* Note editing popup */
+.cal-note-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.cal-note-popup {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 340px;
+  padding: 16px;
+}
+
+.cal-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #252423;
+}
+
+.cal-note-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #605e5c;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.cal-note-close:hover {
+  background: #f3f2f1;
+}
+
+.cal-note-input {
+  width: 100%;
+  border: 1px solid #c8c6c4;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.cal-note-input:focus {
+  border-color: #6264a7;
+  box-shadow: 0 0 0 1px #6264a7;
+}
+
+.cal-note-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cal-note-cancel {
+  padding: 6px 16px;
+  border: 1px solid #c8c6c4;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  color: #252423;
+}
+
+.cal-note-cancel:hover {
+  background: #f3f2f1;
+}
+
+.cal-note-save {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #6264a7;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cal-note-save:hover {
+  background: #4f4f8a;
+}
+
 /* Month view */
 .cal-month-grid-wrapper {
   border: 1px solid var(--gray-200);
