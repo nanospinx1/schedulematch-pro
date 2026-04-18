@@ -179,7 +179,7 @@ export default function Calendar() {
                       </div>
                       <div className="cal-modal-grid-panel">
                         <div className="cal-modal-grid-label cal-modal-grid-label-provider">🏥 {providerData.name}</div>
-                        <CalendarAvailability {...sharedNav} hideToolbar availability={providerData.availability || []} onChange={handleProviderChange} />
+                        <CalendarAvailability {...sharedNav} hideToolbar slotClassName="cal-slot-provider" availability={providerData.availability || []} onChange={handleProviderChange} />
                       </div>
                     </div>
                   </div>

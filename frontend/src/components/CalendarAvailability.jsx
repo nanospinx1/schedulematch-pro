@@ -97,7 +97,7 @@ function formatTime12(time24) {
 
 export default function CalendarAvailability({
   availability, onChange, hideToolbar, hideGrid,
-  overlaySlots,
+  overlaySlots, slotClassName,
   weekStart: extWeekStart, onWeekStartChange,
   selectedDate: extSelectedDate, onSelectedDateChange,
   monthDate: extMonthDate, onMonthDateChange,
@@ -526,7 +526,7 @@ export default function CalendarAvailability({
                 return (
                   <div
                     key={`s-${slot._idx}`}
-                    className="cal-slot"
+                    className={`cal-slot${slotClassName ? ` ${slotClassName}` : ''}`}
                     style={{
                       gridColumn: dayIdx + 2,
                       gridRow: `${startRow + 2} / span ${span}`,
