@@ -150,6 +150,11 @@ export default function Calendar() {
                     {providers.map(p => <option key={p.id} value={p.id}>{p.name}{p.specialty ? ` (${p.specialty})` : ''}</option>)}
                   </select>
                 </div>
+                {hasBoth && overlaps.length > 0 && (
+                  <div className="cal-page-overlap-badge">
+                    {overlaps.length} overlap{overlaps.length !== 1 ? 's' : ''}
+                  </div>
+                )}
                 {hasBoth && (
                   <button
                     type="button"
