@@ -419,7 +419,7 @@ export default function CalendarAvailability({
               </button>
             ))}
           </div>
-          <div className="cal-hint">Click &amp; drag to add • Click slot to remove</div>
+          <div className="cal-hint">Click &amp; drag to add • Hover slot ✕ to remove</div>
           <div className="cal-tz-wrapper">
             <span className="cal-tz-icon">🌐</span>
             <select className="cal-tz-select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
@@ -531,10 +531,15 @@ export default function CalendarAvailability({
                       gridColumn: dayIdx + 2,
                       gridRow: `${startRow + 2} / span ${span}`,
                     }}
-                    onClick={(e) => { e.stopPropagation(); removeSlot(slot._idx); }}
-                    title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\nClick to remove`}
+                    title={`${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                    <button
+                      type="button"
+                      className="cal-slot-delete"
+                      onClick={(e) => { e.stopPropagation(); removeSlot(slot._idx); }}
+                      title="Remove slot"
+                    >✕</button>
                   </div>
                 );
               });

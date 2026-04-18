@@ -526,7 +526,7 @@
   border-radius: 4px;
   margin: 1px 3px;
   padding: 2px 6px;
-  cursor: pointer;
+  cursor: default;
   overflow: hidden;
   z-index: 1;
   position: relative;
@@ -537,7 +537,35 @@
 .cal-slot:hover {
   background: linear-gradient(135deg, #f87171, #ef4444);
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-  transform: scale(1.02);
+}
+
+.cal-slot-delete {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: white;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+}
+
+.cal-slot:hover .cal-slot-delete {
+  display: flex;
+}
+
+.cal-slot-delete:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.15);
 }
 
 .cal-slot-overlay {
