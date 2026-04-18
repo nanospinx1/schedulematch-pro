@@ -212,21 +212,20 @@
 
 .cal-picker-today {
   font-weight: 700;
-  background: var(--primary);
+  background: #4338ca;
   color: white !important;
   border-radius: 50%;
 }
 
 .cal-picker-today.cal-picker-sel-week,
 .cal-picker-today.cal-picker-hover-week {
-  color: var(--primary) !important;
-  background: white;
+  background: #4338ca;
+  color: white !important;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--primary);
 }
 
 .cal-picker-today:hover {
-  background: var(--primary-hover);
+  background: #3730a3;
 }
 
 .cal-picker-hover-week,
