@@ -8,6 +8,7 @@ import Providers from './pages/Providers';
 import Matching from './pages/Matching';
 import Communications from './pages/Communications';
 import Preferences from './pages/Preferences';
+import Calendar from './pages/Calendar';
 
 function NavBar() {
   const { user, logout } = useAuth();
@@ -17,6 +18,7 @@ function NavBar() {
     { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/clients', label: 'Clients', icon: '👥' },
     { path: '/providers', label: 'Providers', icon: '🏥' },
+    { path: '/calendar', label: 'Calendar', icon: '🗓️' },
     { path: '/matching', label: 'Scheduling', icon: '📅' },
     { path: '/communications', label: 'Communications', icon: '📞' },
     { path: '/preferences', label: 'Preferences', icon: '⚙️' },
@@ -69,6 +71,7 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
           <Route path="/providers" element={<ProtectedRoute><Providers /></ProtectedRoute>} />
+          <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/matching" element={<ProtectedRoute><Matching /></ProtectedRoute>} />
           <Route path="/communications" element={<ProtectedRoute><Communications /></ProtectedRoute>} />
           <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
