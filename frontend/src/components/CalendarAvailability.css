@@ -6,26 +6,32 @@
 
 .cal-toolbar {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.cal-toolbar-row {
+  display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-/* Navigation group: ‹ Today › as a connected pill */
+/* Navigation group: ‹ Today › */
 .cal-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .cal-nav-btn {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--gray-200);
   background: white;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 6px;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -44,12 +50,12 @@
 }
 
 .cal-today-btn {
-  height: 36px;
-  padding: 0 14px;
+  height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--gray-200);
   background: white;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   color: var(--gray-700);
@@ -95,14 +101,14 @@
 }
 
 .cal-title-btn {
-  height: 36px;
-  font-size: 14px;
+  height: 30px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--gray-800);
   background: white;
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 0 12px;
+  border-radius: 6px;
+  padding: 0 10px;
   cursor: pointer;
   font-family: inherit;
   display: flex;
@@ -326,17 +332,17 @@
   display: flex;
   background: white;
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .cal-view-btn {
-  height: 36px;
-  padding: 0 14px;
+  height: 30px;
+  padding: 0 10px;
   border: none;
   border-right: 1px solid var(--gray-200);
   background: white;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   color: var(--gray-500);
@@ -364,9 +370,8 @@
 }
 
 .cal-hint {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--gray-400);
-  margin-left: auto;
   font-style: italic;
 }
 
@@ -377,20 +382,21 @@
   gap: 4px;
   background: white;
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 0 8px 0 10px;
-  height: 36px;
+  border-radius: 6px;
+  padding: 0 6px 0 8px;
+  height: 26px;
+  margin-left: auto;
 }
 
 .cal-tz-icon {
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .cal-tz-select {
   border: none;
   background: transparent;
-  font-size: 12px;
+  font-size: 11px;
   font-family: inherit;
   color: var(--gray-700);
   cursor: pointer;

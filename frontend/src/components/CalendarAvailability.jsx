@@ -295,29 +295,18 @@ export default function CalendarAvailability({ availability, onChange }) {
   return (
     <div className="cal-container" onMouseUp={handleMouseUp} onMouseLeave={() => setDragging(null)}>
       <div className="cal-toolbar">
-        <div className="cal-nav">
-          <button type="button" className="cal-nav-btn" onClick={handlePrev}>‹</button>
-          <button type="button" className={`cal-today-btn ${viewContainsToday ? 'cal-today-btn-active' : 'cal-today-btn-away'}`} onClick={goToday}>
-            {viewContainsToday ? '● Today' : '↩ Today'}
-          </button>
-          <button type="button" className="cal-nav-btn" onClick={handleNext}>›</button>
-          <div className="cal-view-toggle">
-            {['day', 'week', 'month'].map(v => (
-              <button
-                key={v}
-                type="button"
-                className={`cal-view-btn ${viewMode === v ? 'cal-view-btn-active' : ''}`}
-                onClick={() => setViewMode(v)}
-              >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
+        <div className="cal-toolbar-row">
+          <div className="cal-nav">
+            <button type="button" className="cal-nav-btn" onClick={handlePrev}>‹</button>
+            <button type="button" className={`cal-today-btn ${viewContainsToday ? 'cal-today-btn-active' : 'cal-today-btn-away'}`} onClick={goToday}>
+              {viewContainsToday ? '● Today' : '↩ Today'}
+            </button>
+            <button type="button" className="cal-nav-btn" onClick={handleNext}>›</button>
           </div>
-        </div>
-        <div className="cal-title-wrapper" ref={pickerRef}>
-          <button type="button" className="cal-title-btn" onClick={togglePicker}>
-            {titleText} <span className="cal-title-chevron">{pickerOpen ? '▲' : '▼'}</span>
-          </button>
+          <div className="cal-title-wrapper" ref={pickerRef}>
+            <button type="button" className="cal-title-btn" onClick={togglePicker}>
+              {titleText} <span className="cal-title-chevron">{pickerOpen ? '▲' : '▼'}</span>
+            </button>
           {pickerOpen && (
             <div className="cal-picker-dropdown">
               <div className="cal-picker-left">
@@ -389,18 +378,33 @@ export default function CalendarAvailability({ availability, onChange }) {
             </div>
           )}
         </div>
-        <div className="cal-hint">Click &amp; drag to add • Click slot to remove</div>
-        <div className="cal-tz-wrapper">
-          <span className="cal-tz-icon">🌐</span>
-          <select className="cal-tz-select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-            {(() => {
-              const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const allTzs = COMMON_TIMEZONES.includes(browserTz) ? COMMON_TIMEZONES : [browserTz, ...COMMON_TIMEZONES];
-              return allTzs.map(tz => (
-                <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
-              ));
-            })()}
-          </select>
+          <div className="cal-view-toggle">
+            {['day', 'week', 'month'].map(v => (
+              <button
+                key={v}
+                type="button"
+                className={`cal-view-btn ${viewMode === v ? 'cal-view-btn-active' : ''}`}
+                onClick={() => setViewMode(v)}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="cal-toolbar-row">
+          <div className="cal-hint">Click &amp; drag to add • Click slot to remove</div>
+          <div className="cal-tz-wrapper">
+            <span className="cal-tz-icon">🌐</span>
+            <select className="cal-tz-select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+              {(() => {
+                const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const allTzs = COMMON_TIMEZONES.includes(browserTz) ? COMMON_TIMEZONES : [browserTz, ...COMMON_TIMEZONES];
+                return allTzs.map(tz => (
+                  <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
+                ));
+              })()}
+            </select>
+          </div>
         </div>
       </div>
 
