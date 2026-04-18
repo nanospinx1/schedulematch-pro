@@ -85,6 +85,211 @@
   color: var(--gray-800);
 }
 
+/* Date Picker Dropdown */
+.cal-title-wrapper {
+  position: relative;
+}
+
+.cal-title-btn {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-800);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.cal-title-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.cal-title-chevron {
+  font-size: 10px;
+  color: var(--gray-500);
+}
+
+.cal-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  display: flex;
+  z-index: 100;
+  padding: 16px;
+  gap: 20px;
+  min-width: 440px;
+}
+
+.cal-picker-left {
+  flex: 0 0 auto;
+}
+
+.cal-picker-month-header,
+.cal-picker-year-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cal-picker-month-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.cal-picker-year-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.cal-picker-month-nav,
+.cal-picker-year-nav {
+  display: flex;
+  gap: 2px;
+}
+
+.cal-picker-month-nav button,
+.cal-picker-year-nav button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.cal-picker-month-nav button:hover,
+.cal-picker-year-nav button:hover {
+  background: var(--gray-100);
+  color: var(--gray-800);
+}
+
+.cal-picker-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  text-align: center;
+}
+
+.cal-picker-mini-hdr {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-400);
+  padding: 4px 0;
+  text-transform: uppercase;
+}
+
+.cal-picker-mini-day {
+  font-size: 13px;
+  padding: 5px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--gray-700);
+  transition: background 0.1s;
+}
+
+.cal-picker-mini-day:hover {
+  background: var(--gray-100);
+}
+
+.cal-picker-dim {
+  color: var(--gray-300);
+}
+
+.cal-picker-today {
+  font-weight: 700;
+  background: var(--primary);
+  color: white !important;
+  border-radius: 50%;
+}
+
+.cal-picker-today:hover {
+  background: var(--primary-hover);
+}
+
+.cal-picker-sel-week {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+  border-radius: 4px;
+}
+
+.cal-picker-right {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.cal-picker-year-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  flex: 1;
+}
+
+.cal-picker-year-month {
+  font-size: 13px;
+  padding: 8px 12px;
+  text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--gray-700);
+  transition: all 0.15s;
+}
+
+.cal-picker-year-month:hover {
+  background: var(--gray-100);
+}
+
+.cal-picker-year-month-active {
+  background: var(--primary);
+  color: white;
+}
+
+.cal-picker-year-month-active:hover {
+  background: var(--primary-hover);
+}
+
+.cal-picker-today-link {
+  text-align: right;
+  margin-top: 8px;
+}
+
+.cal-picker-today-link button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.cal-picker-today-link button:hover {
+  background: var(--primary-light);
+}
+
 /* View toggle button group */
 .cal-view-toggle {
   display: flex;

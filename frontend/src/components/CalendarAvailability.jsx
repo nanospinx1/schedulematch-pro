@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import './CalendarAvailability.css';
 
 const HOURS_START = 0;
@@ -86,6 +86,20 @@ export default function CalendarAvailability({ availability, onChange }) {
   const [viewMode, setViewMode] = useState('week');
   const [dragging, setDragging] = useState(null);
   const [now, setNow] = useState(() => new Date());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const pickerRef = useRef(null);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handler = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [pickerOpen]);
 
   // Update current time every minute for the time indicator
   useEffect(() => {
@@ -120,6 +134,64 @@ export default function CalendarAvailability({ availability, onChange }) {
     setWeekStart(getWeekStart(now));
     setSelectedDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
     setMonthDate(new Date(now));
+  };
+
+  // Mini calendar: rows of 7 days covering full weeks for a month
+  const pickerWeeks = useMemo(() => {
+    const y = pickerMonth.getFullYear(), m = pickerMonth.getMonth();
+    const first = new Date(y, m, 1);
+    const startOffset = first.getDay();
+    const start = new Date(y, m, 1 - startOffset);
+    const weeks = [];
+    for (let w = 0; w < 6; w++) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + w * 7 + d);
+        week.push(day);
+      }
+      // skip row if entire week is in next month (beyond the displayed month)
+      if (w >= 4 && week[0].getMonth() !== m && week[6].getMonth() !== m) break;
+      weeks.push(week);
+    }
+    return weeks;
+  }, [pickerMonth]);
+
+  const handlePickerWeekClick = (weekRow) => {
+    const ws = getWeekStart(weekRow[0]);
+    setWeekStart(ws);
+    setSelectedDate(weekRow[0]);
+    setMonthDate(new Date(weekRow[0]));
+    setPickerOpen(false);
+  };
+
+  const handlePickerMonthSelect = (monthIdx) => {
+    setPickerMonth(new Date(pickerYear, monthIdx, 1));
+  };
+
+  const handlePickerToday = () => {
+    const t = new Date();
+    setPickerMonth(new Date(t.getFullYear(), t.getMonth(), 1));
+    setPickerYear(t.getFullYear());
+    goToday();
+    setPickerOpen(false);
+  };
+
+  const togglePicker = () => {
+    if (!pickerOpen) {
+      // Sync picker to current calendar position
+      if (viewMode === 'week') {
+        setPickerMonth(new Date(weekStart.getFullYear(), weekStart.getMonth(), 1));
+        setPickerYear(weekStart.getFullYear());
+      } else if (viewMode === 'day') {
+        setPickerMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+        setPickerYear(selectedDate.getFullYear());
+      } else {
+        setPickerMonth(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1));
+        setPickerYear(monthDate.getFullYear());
+      }
+    }
+    setPickerOpen(!pickerOpen);
   };
 
   const handleMouseDown = (dayIdx, row) => {
@@ -206,7 +278,76 @@ export default function CalendarAvailability({ availability, onChange }) {
           </button>
           <button type="button" className="cal-nav-btn" onClick={handleNext}>›</button>
         </div>
-        <div className="cal-title">{titleText}</div>
+        <div className="cal-title-wrapper" ref={pickerRef}>
+          <button type="button" className="cal-title-btn" onClick={togglePicker}>
+            {titleText} <span className="cal-title-chevron">{pickerOpen ? '▲' : '▼'}</span>
+          </button>
+          {pickerOpen && (
+            <div className="cal-picker-dropdown">
+              <div className="cal-picker-left">
+                <div className="cal-picker-month-header">
+                  <span className="cal-picker-month-title">
+                    {FULL_MONTH_NAMES[pickerMonth.getMonth()]} {pickerMonth.getFullYear()}
+                  </span>
+                  <div className="cal-picker-month-nav">
+                    <button type="button" onClick={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() - 1, 1))}>↑</button>
+                    <button type="button" onClick={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 1))}>↓</button>
+                  </div>
+                </div>
+                <div className="cal-picker-mini-grid">
+                  {['S','M','T','W','T','F','S'].map((l, i) => (
+                    <div key={i} className="cal-picker-mini-hdr">{l}</div>
+                  ))}
+                  {pickerWeeks.map((week, wi) => {
+                    const weekStartStr = toDateStr(getWeekStart(week[0]));
+                    const currentWeekStr = toDateStr(weekStart);
+                    const isSelectedWeek = weekStartStr === currentWeekStr;
+                    return week.map((day, di) => {
+                      const isCurrentMonth = day.getMonth() === pickerMonth.getMonth();
+                      const dayStr = toDateStr(day);
+                      const isToday = dayStr === todayStr;
+                      return (
+                        <div
+                          key={`${wi}-${di}`}
+                          className={`cal-picker-mini-day${!isCurrentMonth ? ' cal-picker-dim' : ''}${isToday ? ' cal-picker-today' : ''}${isSelectedWeek ? ' cal-picker-sel-week' : ''}`}
+                          onClick={() => handlePickerWeekClick(week)}
+                        >
+                          {day.getDate()}
+                        </div>
+                      );
+                    });
+                  })}
+                </div>
+              </div>
+              <div className="cal-picker-right">
+                <div className="cal-picker-year-header">
+                  <span className="cal-picker-year-title">{pickerYear}</span>
+                  <div className="cal-picker-year-nav">
+                    <button type="button" onClick={() => setPickerYear(pickerYear - 1)}>↑</button>
+                    <button type="button" onClick={() => setPickerYear(pickerYear + 1)}>↓</button>
+                  </div>
+                </div>
+                <div className="cal-picker-year-grid">
+                  {MONTH_NAMES.map((mn, mi) => {
+                    const isCurrent = mi === pickerMonth.getMonth() && pickerYear === pickerMonth.getFullYear();
+                    return (
+                      <div
+                        key={mi}
+                        className={`cal-picker-year-month${isCurrent ? ' cal-picker-year-month-active' : ''}`}
+                        onClick={() => handlePickerMonthSelect(mi)}
+                      >
+                        {mn}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="cal-picker-today-link">
+                  <button type="button" onClick={handlePickerToday}>Today</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="cal-view-toggle">
           {['day', 'week', 'month'].map(v => (
             <button
