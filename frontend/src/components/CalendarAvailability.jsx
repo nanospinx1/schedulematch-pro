@@ -112,12 +112,12 @@ export default function CalendarAvailability({ availability, onChange }) {
   const gridWrapperRef = useRef(null);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-  // Auto-scroll to ~7:45 AM on mount
+  // Auto-scroll to 8 AM on mount
   useEffect(() => {
     if (gridWrapperRef.current) {
       const rowHeight = 24;
       const headerHeight = 40;
-      gridWrapperRef.current.scrollTop = headerHeight + 15.5 * rowHeight;
+      gridWrapperRef.current.scrollTop = headerHeight + (8 * 2) * rowHeight;
     }
   }, []);
 
