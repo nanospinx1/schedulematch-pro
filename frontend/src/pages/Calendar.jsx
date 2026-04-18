@@ -44,7 +44,12 @@ export default function Calendar() {
   }, [selectedClientId]);
 
   useEffect(() => {
-    if (!selectedProviderId) { setProviderData(null); return; }
+    if (!selectedProviderId) {
+      setProviderData(null);
+      // Fall back to client timezone when provider is deselected
+      if (clientData?.timezone) setTimezone(clientData.timezone);
+      return;
+    }
     api.getProvider(selectedProviderId).then(data => {
       setProviderData(data);
       // Provider timezone takes priority when both are selected
