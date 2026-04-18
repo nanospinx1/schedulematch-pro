@@ -2,33 +2,50 @@ import { useState, useEffect } from 'react';
 import { api } from '../api';
 import CalendarAvailability from '../components/CalendarAvailability';
 
+const COMMON_TIMEZONES = [
+  'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles', 'America/Denver',
+  'America/Chicago', 'America/New_York', 'America/Halifax', 'America/Sao_Paulo',
+  'Atlantic/Reykjavik', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+  'Europe/Istanbul', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Bangkok',
+  'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+];
+
+function formatTzOption(tz) {
+  try {
+    const now = new Date();
+    const offset = now.toLocaleString('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).split('GMT').pop() || '+0';
+    const city = tz.split('/').pop().replace(/_/g, ' ');
+    return `(GMT${offset}) ${city}`;
+  } catch { return tz; }
+}
+
 export default function Clients() {
   const [clients, setClients] = useState([]);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showCalModal, setShowCalModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', notes: '', availability: [] });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', notes: '', timezone: '', availability: [] });
 
   const load = () => api.getClients().then(setClients).catch(() => {});
   useEffect(() => { load(); }, []);
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: '', email: '', phone: '', address: '', notes: '', availability: [] });
+    setForm({ name: '', email: '', phone: '', address: '', notes: '', timezone: '', availability: [] });
     setShowInfoModal(true);
   };
 
   const openEditInfo = async (client) => {
     const full = await api.getClient(client.id);
     setEditing(client.id);
-    setForm({ name: full.name, email: full.email || '', phone: full.phone || '', address: full.address || '', notes: full.notes || '', availability: full.availability || [] });
+    setForm({ name: full.name, email: full.email || '', phone: full.phone || '', address: full.address || '', notes: full.notes || '', timezone: full.timezone || '', availability: full.availability || [] });
     setShowInfoModal(true);
   };
 
   const openAvailability = async (client) => {
     const full = await api.getClient(client.id);
     setEditing(client.id);
-    setForm({ name: full.name, email: full.email || '', phone: full.phone || '', address: full.address || '', notes: full.notes || '', availability: full.availability || [] });
+    setForm({ name: full.name, email: full.email || '', phone: full.phone || '', address: full.address || '', notes: full.notes || '', timezone: full.timezone || '', availability: full.availability || [] });
     setShowCalModal(true);
   };
 
@@ -122,6 +139,15 @@ export default function Clients() {
                 <div className="form-group">
                   <label>Address</label>
                   <input className="form-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Full address" />
+                </div>
+                <div className="form-group">
+                  <label>Timezone</label>
+                  <select className="form-input" value={form.timezone} onChange={e => setForm({...form, timezone: e.target.value})}>
+                    <option value="">— Select Timezone —</option>
+                    {COMMON_TIMEZONES.map(tz => (
+                      <option key={tz} value={tz}>{formatTzOption(tz)}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="form-group">

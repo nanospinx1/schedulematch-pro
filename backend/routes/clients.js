@@ -11,12 +11,12 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { name, email, phone, address, notes, availability } = req.body;
+  const { name, email, phone, address, notes, timezone, availability } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const result = db.prepare(
-    'INSERT INTO clients (user_id, name, email, phone, address, notes) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(req.user.id, name, email || null, phone || null, address || null, notes || null);
+    'INSERT INTO clients (user_id, name, email, phone, address, notes, timezone) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(req.user.id, name, email || null, phone || null, address || null, notes || null, timezone || null);
 
   const clientId = result.lastInsertRowid;
 
@@ -39,13 +39,13 @@ router.get('/:id', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
-  const { name, email, phone, address, notes, availability } = req.body;
+  const { name, email, phone, address, notes, timezone, availability } = req.body;
   const client = db.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!client) return res.status(404).json({ error: 'Client not found' });
 
   db.prepare(
-    'UPDATE clients SET name=?, email=?, phone=?, address=?, notes=? WHERE id=?'
-  ).run(name || client.name, email ?? client.email, phone ?? client.phone, address ?? client.address, notes ?? client.notes, client.id);
+    'UPDATE clients SET name=?, email=?, phone=?, address=?, notes=?, timezone=? WHERE id=?'
+  ).run(name || client.name, email ?? client.email, phone ?? client.phone, address ?? client.address, notes ?? client.notes, timezone ?? client.timezone, client.id);
 
   if (availability && Array.isArray(availability)) {
     db.prepare('DELETE FROM client_availability WHERE client_id = ?').run(client.id);

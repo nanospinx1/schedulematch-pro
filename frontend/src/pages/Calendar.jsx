@@ -36,14 +36,18 @@ export default function Calendar() {
 
   useEffect(() => {
     if (!selectedClientId) { setClientData(null); return; }
-    api.getClient(selectedClientId).then(setClientData).catch(() => setClientData(null));
+    api.getClient(selectedClientId).then(data => {
+      setClientData(data);
+      // Default to client timezone when only client is selected (no provider)
+      if (data.timezone && !selectedProviderId) setTimezone(data.timezone);
+    }).catch(() => setClientData(null));
   }, [selectedClientId]);
 
   useEffect(() => {
     if (!selectedProviderId) { setProviderData(null); return; }
     api.getProvider(selectedProviderId).then(data => {
       setProviderData(data);
-      // Default calendar timezone to provider's timezone
+      // Provider timezone takes priority when both are selected
       if (data.timezone) setTimezone(data.timezone);
     }).catch(() => setProviderData(null));
   }, [selectedProviderId]);
