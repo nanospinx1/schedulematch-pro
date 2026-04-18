@@ -41,7 +41,11 @@ export default function Calendar() {
 
   useEffect(() => {
     if (!selectedProviderId) { setProviderData(null); return; }
-    api.getProvider(selectedProviderId).then(setProviderData).catch(() => setProviderData(null));
+    api.getProvider(selectedProviderId).then(data => {
+      setProviderData(data);
+      // Default calendar timezone to provider's timezone
+      if (data.timezone) setTimezone(data.timezone);
+    }).catch(() => setProviderData(null));
   }, [selectedProviderId]);
 
   const openClient = (id) => {

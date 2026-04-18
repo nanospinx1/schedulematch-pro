@@ -11,12 +11,12 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { name, email, phone, address, specialty, notes, availability } = req.body;
+  const { name, email, phone, address, specialty, notes, timezone, availability } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const result = db.prepare(
-    'INSERT INTO providers (user_id, name, email, phone, address, specialty, notes) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(req.user.id, name, email || null, phone || null, address || null, specialty || null, notes || null);
+    'INSERT INTO providers (user_id, name, email, phone, address, specialty, notes, timezone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(req.user.id, name, email || null, phone || null, address || null, specialty || null, notes || null, timezone || null);
 
   const providerId = result.lastInsertRowid;
 
@@ -39,13 +39,13 @@ router.get('/:id', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
-  const { name, email, phone, address, specialty, notes, availability } = req.body;
+  const { name, email, phone, address, specialty, notes, timezone, availability } = req.body;
   const provider = db.prepare('SELECT * FROM providers WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!provider) return res.status(404).json({ error: 'Provider not found' });
 
   db.prepare(
-    'UPDATE providers SET name=?, email=?, phone=?, address=?, specialty=?, notes=? WHERE id=?'
-  ).run(name || provider.name, email ?? provider.email, phone ?? provider.phone, address ?? provider.address, specialty ?? provider.specialty, notes ?? provider.notes, provider.id);
+    'UPDATE providers SET name=?, email=?, phone=?, address=?, specialty=?, notes=?, timezone=? WHERE id=?'
+  ).run(name || provider.name, email ?? provider.email, phone ?? provider.phone, address ?? provider.address, specialty ?? provider.specialty, notes ?? provider.notes, timezone ?? provider.timezone, provider.id);
 
   if (availability && Array.isArray(availability)) {
     db.prepare('DELETE FROM provider_availability WHERE provider_id = ?').run(provider.id);
