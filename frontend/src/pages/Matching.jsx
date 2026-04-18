@@ -10,13 +10,68 @@ function formatDate(dateStr) {
   return `${day} ${dateStr}`;
 }
 
+function formatTime12(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
+}
+
+function ScoreBadge({ score, best }) {
+  const color = best ? '#059669' : score >= 20 ? '#2563eb' : score >= 10 ? '#7c3aed' : '#6b7280';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      background: best ? '#ecfdf5' : `${color}10`, color,
+      padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600
+    }}>
+      {best && '⭐ '}{score} pts
+    </span>
+  );
+}
+
+function DurationBadge({ minutes }) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const label = h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`;
+  return (
+    <span style={{
+      background: '#f0f9ff', color: '#0369a1', padding: '2px 6px',
+      borderRadius: 8, fontSize: 11, fontWeight: 500
+    }}>
+      {label}
+    </span>
+  );
+}
+
+function TzBadge({ tz }) {
+  if (!tz) return null;
+  const short = tz.split('/').pop().replace(/_/g, ' ');
+  return (
+    <span style={{
+      background: '#fef3c7', color: '#92400e', padding: '1px 6px',
+      borderRadius: 8, fontSize: 11
+    }}>
+      🕐 {short}
+    </span>
+  );
+}
+
 export default function Matching() {
   const [clients, setClients] = useState([]);
   const [matches, setMatches] = useState([]);
   const [selectedClient, setSelectedClient] = useState('');
   const [suggestions, setSuggestions] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({ client_id: '', provider_id: '', session_date: '', start_time: '', end_time: '', notes: '' });
+  const [conflictError, setConflictError] = useState(null);
+
+  // Filters
+  const [sortBy, setSortBy] = useState('score'); // score, date, duration
+  const [filterDate, setFilterDate] = useState('');
+  const [minDuration, setMinDuration] = useState(0);
 
   // Real-time suggestion state
   const [rtMode, setRtMode] = useState(false);
@@ -35,27 +90,43 @@ export default function Matching() {
 
   const handleGetSuggestions = async () => {
     if (!selectedClient) return;
-    const data = await api.getSuggestions(selectedClient);
-    setSuggestions(data);
+    setLoading(true);
+    try {
+      const data = await api.getSuggestions(selectedClient);
+      setSuggestions(data);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
   };
 
   const fillFromSuggestion = (provider, slot) => {
     setScheduleForm({
-      client_id: selectedClient,
+      client_id: suggestions?.client?.id || selectedClient,
       provider_id: provider.id,
       session_date: slot.date,
       start_time: slot.start_time,
       end_time: slot.end_time,
       notes: ''
     });
+    setConflictError(null);
     setShowSchedule(true);
   };
 
-  const handleSchedule = async () => {
-    await api.createMatch(scheduleForm);
-    setShowSchedule(false);
-    setSuggestions(null);
-    load();
+  const handleSchedule = async (force = false) => {
+    try {
+      const body = { ...scheduleForm };
+      if (force) body.force = true;
+      await api.createMatch(body);
+      setShowSchedule(false);
+      setConflictError(null);
+      setSuggestions(null);
+      load();
+    } catch (err) {
+      if (err.status === 409 && err.data?.conflicts) {
+        setConflictError(err.data);
+      }
+    }
   };
 
   const handleStatusChange = async (id, status) => {
@@ -68,6 +139,16 @@ export default function Matching() {
       await api.deleteMatch(id);
       load();
     }
+  };
+
+  // Filter and sort suggestion slots
+  const getFilteredSlots = (slots) => {
+    let filtered = slots.filter(s => s.duration_minutes >= minDuration);
+    if (filterDate) filtered = filtered.filter(s => s.date === filterDate);
+    if (sortBy === 'date') filtered.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+    else if (sortBy === 'duration') filtered.sort((a, b) => b.duration_minutes - a.duration_minutes);
+    // Default is score (already sorted by backend)
+    return filtered;
   };
 
   // Real-time suggestions (for phone calls)
@@ -93,6 +174,8 @@ export default function Matching() {
     setRtDates(prev => prev.filter(d => d !== date));
   };
 
+  const bestProviderId = suggestions?.suggestions?.[0]?.provider?.id;
+
   return (
     <div>
       <div className="page-header">
@@ -101,7 +184,7 @@ export default function Matching() {
           <button className="btn btn-outline" onClick={() => setRtMode(!rtMode)}>
             {rtMode ? '📋 Standard Mode' : '📞 Phone Mode'}
           </button>
-          <button className="btn btn-primary" onClick={() => { setShowSchedule(true); setScheduleForm({ client_id: '', provider_id: '', session_date: '', start_time: '', end_time: '', notes: '' }); }}>
+          <button className="btn btn-primary" onClick={() => { setShowSchedule(true); setConflictError(null); setScheduleForm({ client_id: '', provider_id: '', session_date: '', start_time: '', end_time: '', notes: '' }); }}>
             + Manual Schedule
           </button>
         </div>
@@ -159,6 +242,7 @@ export default function Matching() {
                   <div key={i} className="suggestion-item" onClick={() => {
                     setRtMode(false);
                     setScheduleForm({ client_id: rtClient, provider_id: r.provider.id, session_date: r.date, start_time: r.start_time, end_time: r.end_time, notes: '' });
+                    setConflictError(null);
                     setShowSchedule(true);
                   }}>
                     <div>
@@ -176,11 +260,11 @@ export default function Matching() {
         </div>
       )}
 
-      {/* Standard suggestion mode */}
+      {/* Standard auto-match mode */}
       {!rtMode && (
         <div className="card" style={{ marginBottom: 24 }}>
           <div className="card-header">
-            <h2>Find Matches for a Client</h2>
+            <h2>🔍 Auto-Match Engine</h2>
           </div>
           <div className="card-body">
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
@@ -188,34 +272,111 @@ export default function Matching() {
                 <label>Select Client</label>
                 <select className="form-select" value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>
                   <option value="">Choose a client...</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}{c.timezone ? ` (${c.timezone.split('/').pop().replace(/_/g, ' ')})` : ''}</option>)}
                 </select>
               </div>
-              <button className="btn btn-primary" onClick={handleGetSuggestions} disabled={!selectedClient}>
-                🔍 Find Providers
+              <button className="btn btn-primary" onClick={handleGetSuggestions} disabled={!selectedClient || loading}>
+                {loading ? '⏳ Matching...' : '🔍 Find Best Matches'}
               </button>
             </div>
 
             {suggestions && (
-              <div style={{ marginTop: 16 }}>
-                <h3 style={{ marginBottom: 8 }}>Matching providers for {suggestions.client.name}:</h3>
+              <div style={{ marginTop: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0 }}>
+                    Matches for <strong>{suggestions.client.name}</strong>
+                    {suggestions.client.timezone && <TzBadge tz={suggestions.client.timezone} />}
+                  </h3>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>
+                    {suggestions.suggestions.length} provider{suggestions.suggestions.length !== 1 ? 's' : ''} found
+                  </span>
+                </div>
+
+                {/* Filters bar */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', padding: '8px 12px', background: '#f9fafb', borderRadius: 8, fontSize: 13 }}>
+                  <span style={{ color: '#6b7280', fontWeight: 500 }}>Sort:</span>
+                  {['score', 'date', 'duration'].map(s => (
+                    <button key={s} className={`btn btn-sm ${sortBy === s ? 'btn-primary' : 'btn-outline'}`}
+                      onClick={() => setSortBy(s)} style={{ padding: '2px 10px', fontSize: 12 }}>
+                      {s === 'score' ? '⭐ Score' : s === 'date' ? '📅 Date' : '⏱ Duration'}
+                    </button>
+                  ))}
+                  <span style={{ color: '#d1d5db' }}>|</span>
+                  <label style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    Min duration:
+                    <select className="form-select" value={minDuration} onChange={e => setMinDuration(Number(e.target.value))}
+                      style={{ width: 'auto', padding: '2px 6px', fontSize: 12 }}>
+                      <option value={0}>Any</option>
+                      <option value={30}>30m+</option>
+                      <option value={60}>1h+</option>
+                      <option value={90}>1.5h+</option>
+                      <option value={120}>2h+</option>
+                    </select>
+                  </label>
+                  <label style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    Date:
+                    <input className="form-input" type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+                      style={{ padding: '2px 6px', fontSize: 12, width: 140 }} />
+                    {filterDate && <button className="btn-ghost" onClick={() => setFilterDate('')} style={{ fontSize: 12, padding: '0 4px' }}>✕</button>}
+                  </label>
+                </div>
+
                 {suggestions.suggestions.length === 0 ? (
                   <p style={{ color: '#6b7280' }}>No overlapping availability found. Try updating schedules.</p>
                 ) : (
-                  suggestions.suggestions.map((s, i) => (
-                    <div key={i} style={{ marginBottom: 12 }}>
-                      <strong>{s.provider.name}</strong> {s.provider.specialty && <span style={{ color: '#6b7280' }}>– {s.provider.specialty}</span>}
-                      {s.provider.address && <span style={{ fontSize: 13, color: '#9ca3af' }}> 📍 {s.provider.address}</span>}
-                      <div style={{ marginTop: 4 }}>
-                        {s.available_slots.map((slot, j) => (
-                          <div key={j} className="suggestion-item" onClick={() => fillFromSuggestion(s.provider, slot)}>
-                            <span><span className="day-tag">{formatDate(slot.date)}</span> {slot.start_time} – {slot.end_time}</span>
-                            <button className="btn btn-sm btn-success">Schedule</button>
+                  suggestions.suggestions.map((s) => {
+                    const isBest = s.provider.id === bestProviderId;
+                    const filteredSlots = getFilteredSlots(s.available_slots);
+                    if (filteredSlots.length === 0) return null;
+                    return (
+                      <div key={s.provider.id} style={{
+                        marginBottom: 16, border: isBest ? '2px solid #059669' : '1px solid #e5e7eb',
+                        borderRadius: 10, overflow: 'hidden',
+                        background: isBest ? '#f0fdf4' : '#fff'
+                      }}>
+                        {/* Provider header */}
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '10px 16px', background: isBest ? '#ecfdf5' : '#f9fafb',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {isBest && <span style={{ background: '#059669', color: '#fff', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>⭐ BEST MATCH</span>}
+                            <strong style={{ fontSize: 15 }}>{s.provider.name}</strong>
+                            {s.provider.specialty && <span style={{ color: '#6b7280', fontSize: 13 }}>• {s.provider.specialty}</span>}
+                            <TzBadge tz={s.provider.timezone} />
                           </div>
-                        ))}
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#6b7280' }}>
+                            <span title="Total match score">Score: <strong style={{ color: '#111' }}>{s.total_score}</strong></span>
+                            <span title="Number of overlapping slots">{s.match_count} slots</span>
+                            <span title="Current bookings for this provider">Load: {s.provider_load}</span>
+                            {s.tz_proximity === 0 && <span style={{ color: '#059669' }}>✓ Same TZ</span>}
+                          </div>
+                        </div>
+
+                        {/* Slot list */}
+                        <div style={{ padding: '4px 8px' }}>
+                          {filteredSlots.slice(0, 8).map((slot, j) => (
+                            <div key={j} className="suggestion-item" onClick={() => fillFromSuggestion(s.provider, slot)}
+                              style={{ padding: '6px 8px', margin: '4px 0', borderRadius: 6 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span className="day-tag" style={{ fontSize: 12 }}>{formatDate(slot.date)}</span>
+                                <span style={{ fontWeight: 500 }}>{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
+                                <DurationBadge minutes={slot.duration_minutes} />
+                                <ScoreBadge score={slot.score} best={slot.score >= 24} />
+                              </div>
+                              <button className="btn btn-sm btn-success">📅 Book</button>
+                            </div>
+                          ))}
+                          {filteredSlots.length > 8 && (
+                            <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', margin: '4px 0' }}>
+                              +{filteredSlots.length - 8} more slots available
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}
@@ -245,13 +406,15 @@ export default function Matching() {
                     <tr key={m.id}>
                       <td>{m.client_name}</td>
                       <td>{m.provider_name}</td>
-                      <td>{m.session_date}</td>
-                      <td>{m.start_time} – {m.end_time}</td>
+                      <td>{formatDate(m.session_date)}</td>
+                      <td>{formatTime12(m.start_time)} – {formatTime12(m.end_time)}</td>
                       <td>
                         <select className="form-select" value={m.status} onChange={e => handleStatusChange(m.id, e.target.value)} style={{ width: 'auto', padding: '4px 8px', fontSize: 13 }}>
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value="pending">⏳ Pending</option>
+                          <option value="confirmed">✅ Confirmed</option>
+                          <option value="completed">✔ Completed</option>
+                          <option value="cancelled">❌ Cancelled</option>
+                          <option value="no_show">🚫 No Show</option>
                         </select>
                       </td>
                       <td>
@@ -266,7 +429,7 @@ export default function Matching() {
         </div>
       </div>
 
-      {/* Schedule modal */}
+      {/* Schedule modal with conflict detection */}
       {showSchedule && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowSchedule(false)}>
           <div className="modal">
@@ -275,6 +438,25 @@ export default function Matching() {
               <button className="btn-ghost" onClick={() => setShowSchedule(false)}>✕</button>
             </div>
             <div className="modal-body">
+              {/* Conflict warning */}
+              {conflictError && (
+                <div style={{
+                  background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8,
+                  padding: 12, marginBottom: 16
+                }}>
+                  <strong style={{ color: '#dc2626' }}>⚠ Scheduling Conflict Detected</strong>
+                  {conflictError.conflicts?.map((c, i) => (
+                    <div key={i} style={{ fontSize: 13, color: '#7f1d1d', marginTop: 4 }}>
+                      {c.conflict_type === 'client' ? '👤 Client' : '🩺 Provider'} conflict:
+                      {' '}{c.client_name} ↔ {c.provider_name} on {formatDate(c.session_date)} {formatTime12(c.start_time)} – {formatTime12(c.end_time)} ({c.status})
+                    </div>
+                  ))}
+                  <button className="btn btn-sm btn-outline" style={{ marginTop: 8 }} onClick={() => handleSchedule(true)}>
+                    Override & Schedule Anyway
+                  </button>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Client</label>
                 <select className="form-select" value={scheduleForm.client_id} onChange={e => setScheduleForm({...scheduleForm, client_id: e.target.value})}>
@@ -310,7 +492,7 @@ export default function Matching() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setShowSchedule(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSchedule}>Schedule Session</button>
+              <button className="btn btn-primary" onClick={() => handleSchedule()}>Schedule Session</button>
             </div>
           </div>
         </div>
