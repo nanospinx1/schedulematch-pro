@@ -576,7 +576,8 @@ export default function CalendarAvailability({
                       gridRow: `${startRow + 2} / span ${span}`,
                     }}
                     title={slot.note ? `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\n📝 ${slot.note}` : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
-                    onClick={() => handleSlotClick(slot._idx, false)}
+                    onClick={() => {}}
+                    onDoubleClick={() => handleSlotClick(slot._idx, false)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
                     {slot.note && <span className="cal-slot-note-icon">📝</span>}
@@ -606,7 +607,8 @@ export default function CalendarAvailability({
                     className={`cal-slot cal-slot-overlay cal-slot-right${slot.note ? ' cal-slot-has-note' : ''}`}
                     style={{ gridColumn: dayIdx + 2, gridRow: `${startRow + 2} / span ${span}` }}
                     title={slot.note ? `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}\n📝 ${slot.note}` : `${formatTime12(slot.start_time)} – ${formatTime12(slot.end_time)}`}
-                    onClick={() => handleSlotClick(slot._oidx, true)}
+                    onClick={() => {}}
+                    onDoubleClick={() => handleSlotClick(slot._oidx, true)}
                   >
                     <span className="cal-slot-time">{formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}</span>
                     {slot.note && <span className="cal-slot-note-icon">📝</span>}
