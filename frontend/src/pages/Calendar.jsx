@@ -5,12 +5,15 @@ import CalendarAvailability, { getWeekStart } from '../components/CalendarAvaila
 export default function Calendar() {
   const [clients, setClients] = useState([]);
   const [providers, setProviders] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  // Which side initiated the modal
+  const [initSide, setInitSide] = useState(null); // 'client' | 'provider'
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [clientData, setClientData] = useState(null);
   const [providerData, setProviderData] = useState(null);
 
-  // Shared navigation state
+  // Shared calendar navigation
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [monthDate, setMonthDate] = useState(() => new Date());
@@ -40,6 +43,38 @@ export default function Calendar() {
     api.getProvider(selectedProviderId).then(setProviderData).catch(() => setProviderData(null));
   }, [selectedProviderId]);
 
+  const openClient = (id) => {
+    setSelectedClientId(id);
+    setSelectedProviderId('');
+    setInitSide('client');
+    setModalOpen(true);
+  };
+
+  const openProvider = (id) => {
+    setSelectedProviderId(id);
+    setSelectedClientId('');
+    setInitSide('provider');
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedClientId('');
+    setSelectedProviderId('');
+    setClientData(null);
+    setProviderData(null);
+  };
+
+  const handleClientChange = (newAvail) => {
+    api.updateClient(selectedClientId, { ...clientData, availability: newAvail })
+      .then(() => api.getClient(selectedClientId).then(setClientData));
+  };
+
+  const handleProviderChange = (newAvail) => {
+    api.updateProvider(selectedProviderId, { ...providerData, availability: newAvail })
+      .then(() => api.getProvider(selectedProviderId).then(setProviderData));
+  };
+
   const overlaps = useMemo(() => {
     if (!clientData?.availability?.length || !providerData?.availability?.length) return [];
     const results = [];
@@ -48,115 +83,102 @@ export default function Calendar() {
         if (cs.date !== ps.date) continue;
         const overlapStart = cs.start_time > ps.start_time ? cs.start_time : ps.start_time;
         const overlapEnd = cs.end_time < ps.end_time ? cs.end_time : ps.end_time;
-        if (overlapStart < overlapEnd) {
+        if (overlapStart < overlapEnd)
           results.push({ date: cs.date, start_time: overlapStart, end_time: overlapEnd });
-        }
       }
     }
     return results;
   }, [clientData, providerData]);
 
-  const hasClient = !!clientData;
-  const hasProvider = !!providerData;
-  const hasBoth = hasClient && hasProvider;
-  const hasOne = (hasClient || hasProvider) && !hasBoth;
+  const hasBoth = !!clientData && !!providerData;
 
   return (
     <div>
       <div className="page-header">
         <h2>📅 Calendar</h2>
-        <p className="page-subtitle">Compare client and provider availability side by side</p>
+        <p className="page-subtitle">Click a client or provider to open their calendar</p>
       </div>
 
-      <div className="cal-page-selectors">
-        <div className="cal-page-selector">
-          <label>Client</label>
-          <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>
-            <option value="">— Select a client —</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div className="cal-page-selector">
-          <label>Provider</label>
-          <select value={selectedProviderId} onChange={(e) => setSelectedProviderId(e.target.value)}>
-            <option value="">— Select a provider —</option>
-            {providers.map(p => <option key={p.id} value={p.id}>{p.name}{p.specialty ? ` (${p.specialty})` : ''}</option>)}
-          </select>
-        </div>
-        {overlaps.length > 0 && (
-          <div className="cal-page-overlap-badge">
-            ✅ {overlaps.length} overlapping slot{overlaps.length !== 1 ? 's' : ''} found
+      <div className="cal-tab-lists">
+        <div className="cal-tab-list">
+          <h3>👤 Clients</h3>
+          <div className="cal-tab-items">
+            {clients.map(c => (
+              <button key={c.id} className="cal-tab-item" onClick={() => openClient(c.id)}>
+                <span className="cal-tab-item-name">{c.name}</span>
+                <span className="cal-tab-item-arrow">→</span>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+        <div className="cal-tab-list">
+          <h3>🏥 Providers</h3>
+          <div className="cal-tab-items">
+            {providers.map(p => (
+              <button key={p.id} className="cal-tab-item" onClick={() => openProvider(p.id)}>
+                <span className="cal-tab-item-name">{p.name}{p.specialty ? ` — ${p.specialty}` : ''}</span>
+                <span className="cal-tab-item-arrow">→</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {!selectedClientId && !selectedProviderId ? (
-        <div className="cal-page-empty">
-          <span className="cal-page-empty-icon">📅</span>
-          <p>Select a client and/or provider above to view their availability</p>
-        </div>
-      ) : hasOne ? (
-        /* Single selection: full-width calendar with toolbar */
-        <div className="cal-page-single">
-          <div className="cal-page-panel-header-single">
-            {hasClient
-              ? <span>👤 {clientData.name} <span className="cal-page-panel-count">{clientData.availability?.length || 0} slots</span></span>
-              : <span>🏥 {providerData.name} <span className="cal-page-panel-count">{providerData.availability?.length || 0} slots</span></span>
-            }
-          </div>
-          <CalendarAvailability
-            {...sharedNav}
-            availability={(hasClient ? clientData : providerData).availability || []}
-            onChange={(newAvail) => {
-              if (hasClient) {
-                api.updateClient(selectedClientId, { ...clientData, availability: newAvail })
-                  .then(() => api.getClient(selectedClientId).then(setClientData));
-              } else {
-                api.updateProvider(selectedProviderId, { ...providerData, availability: newAvail })
-                  .then(() => api.getProvider(selectedProviderId).then(setProviderData));
-              }
-            }}
-          />
-        </div>
-      ) : (
-        /* Both selected: shared toolbar + side-by-side grids */
-        <div className="cal-page-dual">
-          <CalendarAvailability
-            {...sharedNav}
-            hideGrid
-            availability={[]}
-            onChange={() => {}}
-          />
-          <div className="cal-page-grid">
-            <div className="cal-page-panel">
-              <div className="cal-page-panel-header cal-page-panel-client">
-                <span>👤 {clientData.name}</span>
-                <span className="cal-page-panel-count">{clientData.availability?.length || 0} slots</span>
-              </div>
-              <CalendarAvailability
-                {...sharedNav}
-                hideToolbar
-                availability={clientData.availability || []}
-                onChange={(newAvail) => {
-                  api.updateClient(selectedClientId, { ...clientData, availability: newAvail })
-                    .then(() => api.getClient(selectedClientId).then(setClientData));
-                }}
-              />
+      {/* Fullscreen Calendar Modal */}
+      {modalOpen && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
+          <div className="modal modal-fullscreen">
+            <div className="modal-header">
+              <h3>📅 Calendar Comparison</h3>
+              <button className="btn-ghost" onClick={closeModal}>✕</button>
             </div>
-            <div className="cal-page-panel">
-              <div className="cal-page-panel-header cal-page-panel-provider">
-                <span>🏥 {providerData.name}</span>
-                <span className="cal-page-panel-count">{providerData.availability?.length || 0} slots</span>
+            <div className="modal-body">
+              {/* Selectors row inside modal */}
+              <div className="cal-modal-selectors">
+                <div className="cal-modal-sel">
+                  <label>👤 Client</label>
+                  <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>
+                    <option value="">— Select —</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="cal-modal-sel">
+                  <label>🏥 Provider</label>
+                  <select value={selectedProviderId} onChange={(e) => setSelectedProviderId(e.target.value)}>
+                    <option value="">— Select —</option>
+                    {providers.map(p => <option key={p.id} value={p.id}>{p.name}{p.specialty ? ` (${p.specialty})` : ''}</option>)}
+                  </select>
+                </div>
+                {overlaps.length > 0 && (
+                  <div className="cal-page-overlap-badge">
+                    ✅ {overlaps.length} overlap{overlaps.length !== 1 ? 's' : ''}
+                  </div>
+                )}
               </div>
-              <CalendarAvailability
-                {...sharedNav}
-                hideToolbar
-                availability={providerData.availability || []}
-                onChange={(newAvail) => {
-                  api.updateProvider(selectedProviderId, { ...providerData, availability: newAvail })
-                    .then(() => api.getProvider(selectedProviderId).then(setProviderData));
-                }}
-              />
+
+              {hasBoth ? (
+                /* Both selected: shared toolbar + side-by-side grids */
+                <div className="cal-modal-dual">
+                  <CalendarAvailability {...sharedNav} hideGrid availability={[]} onChange={() => {}} />
+                  <div className="cal-modal-grids">
+                    <div className="cal-modal-grid-panel">
+                      <div className="cal-modal-grid-label cal-modal-grid-label-client">👤 {clientData.name}</div>
+                      <CalendarAvailability {...sharedNav} hideToolbar availability={clientData.availability || []} onChange={handleClientChange} />
+                    </div>
+                    <div className="cal-modal-grid-panel">
+                      <div className="cal-modal-grid-label cal-modal-grid-label-provider">🏥 {providerData.name}</div>
+                      <CalendarAvailability {...sharedNav} hideToolbar availability={providerData.availability || []} onChange={handleProviderChange} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Single calendar */
+                <CalendarAvailability
+                  {...sharedNav}
+                  availability={(clientData || providerData)?.availability || []}
+                  onChange={clientData ? handleClientChange : handleProviderChange}
+                />
+              )}
             </div>
           </div>
         </div>

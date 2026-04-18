@@ -424,148 +424,139 @@ tr:hover td { background: var(--gray-50); }
   .stats-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* Calendar page */
-.cal-page-selectors {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+/* Calendar tab */
+.cal-tab-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
-.cal-page-selector {
+.cal-tab-list h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--gray-700);
+}
+
+.cal-tab-items {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.cal-page-selector label {
-  font-size: 12px;
+.cal-tab-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--gray-700);
+  transition: all 0.15s;
+}
+
+.cal-tab-item:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.cal-tab-item-arrow {
+  font-size: 16px;
+  opacity: 0.4;
+}
+
+.cal-tab-item:hover .cal-tab-item-arrow {
+  opacity: 1;
+}
+
+/* Modal selectors row */
+.cal-modal-selectors {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cal-modal-sel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-modal-sel label {
+  font-size: 11px;
   font-weight: 600;
   color: var(--gray-500);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.cal-page-selector select {
-  height: 40px;
-  padding: 0 12px;
+.cal-modal-sel select {
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--gray-300);
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   font-family: inherit;
   color: var(--gray-800);
   background: white;
-  min-width: 240px;
+  min-width: 200px;
   cursor: pointer;
 }
 
-.cal-page-selector select:focus {
+.cal-modal-sel select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-.cal-page-overlap-badge {
-  padding: 8px 16px;
-  background: var(--success-light);
-  color: var(--success);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.cal-page-empty {
+/* Dual calendar layout in modal */
+.cal-modal-dual {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  color: var(--gray-400);
+  gap: 8px;
+}
+
+.cal-modal-grids {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.cal-page-empty-icon {
-  font-size: 48px;
-  opacity: 0.4;
-}
-
-.cal-page-empty p {
-  font-size: 15px;
-}
-
-.cal-page-single {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: 10px;
-  padding: 16px;
-}
-
-.cal-page-panel-header-single {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  background: rgba(79, 70, 229, 0.06);
-  color: var(--primary);
-}
-
-.cal-page-dual {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cal-page-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.cal-page-panel {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: 10px;
-  padding: 16px;
+.cal-modal-grid-panel {
   overflow: hidden;
 }
 
-.cal-page-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  font-size: 15px;
+.cal-modal-grid-label {
+  font-size: 12px;
   font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  display: inline-block;
 }
 
-.cal-page-panel-client {
+.cal-modal-grid-label-client {
   background: rgba(79, 70, 229, 0.08);
   color: var(--primary);
 }
 
-.cal-page-panel-provider {
+.cal-modal-grid-label-provider {
   background: rgba(5, 150, 105, 0.08);
   color: var(--success);
 }
 
-.cal-page-panel-count {
+.cal-page-overlap-badge {
+  padding: 6px 14px;
+  background: var(--success-light);
+  color: var(--success);
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: 500;
-  opacity: 0.7;
-}
-
-.cal-page-panel-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: var(--gray-400);
-  font-size: 14px;
+  font-weight: 600;
 }
