@@ -259,12 +259,13 @@ export default function CalendarAvailability({ availability, onChange }) {
         <div className="cal-grid-wrapper">
           <div className="cal-grid" style={{ gridTemplateColumns: `56px repeat(${colCount}, 1fr)`, gridTemplateRows: `40px repeat(${totalRows}, 24px)` }}>
             {/* Header row */}
-            <div className="cal-corner" />
+            <div className="cal-corner" style={{ gridColumn: 1, gridRow: 1 }} />
             {gridDates.map((d, i) => {
               const ds = toDateStr(d);
               const isToday = ds === todayStr;
               return (
-                <div key={i} className={`cal-day-header ${isToday ? 'cal-today' : ''}`}>
+                <div key={i} className={`cal-day-header ${isToday ? 'cal-today' : ''}`}
+                  style={{ gridColumn: i + 2, gridRow: 1 }}>
                   <span className="cal-day-label">{DAY_LABELS[d.getDay()]}</span>
                   <span className={`cal-day-num ${isToday ? 'cal-today-num' : ''}`}>{d.getDate()}</span>
                 </div>
@@ -276,7 +277,8 @@ export default function CalendarAvailability({ availability, onChange }) {
               const hour = HOURS_START + Math.floor(row / 2);
               const isHourStart = row % 2 === 0;
               return [
-                <div key={`t-${row}`} className={`cal-time-label ${isHourStart ? 'cal-time-label-hour' : 'cal-time-label-half'}`}>
+                <div key={`t-${row}`} className={`cal-time-label ${isHourStart ? 'cal-time-label-hour' : 'cal-time-label-half'}`}
+                  style={{ gridColumn: 1, gridRow: row + 2 }}>
                   {isHourStart ? formatTime12(`${String(hour).padStart(2, '0')}:00`) : ''}
                 </div>,
                 ...gridDates.map((d, dayIdx) => {
@@ -288,6 +290,7 @@ export default function CalendarAvailability({ availability, onChange }) {
                     <div
                       key={`c-${row}-${dayIdx}`}
                       className={`cal-cell ${isHourStart ? 'cal-cell-hour' : ''} ${isHighlight ? 'cal-cell-drag' : ''}`}
+                      style={{ gridColumn: dayIdx + 2, gridRow: row + 2 }}
                       onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, row); }}
                       onMouseEnter={() => handleMouseEnter(dayIdx, row)}
                     />
