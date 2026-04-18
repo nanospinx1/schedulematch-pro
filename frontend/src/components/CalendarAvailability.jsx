@@ -408,8 +408,6 @@ export default function CalendarAvailability({
               </button>
             ))}
           </div>
-        </div>
-        <div className="cal-toolbar-row">
           <div className="cal-hint">Click &amp; drag to add • Click slot to remove</div>
           <div className="cal-tz-wrapper">
             <span className="cal-tz-icon">🌐</span>

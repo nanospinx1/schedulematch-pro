@@ -373,6 +373,7 @@
   font-size: 10px;
   color: var(--gray-400);
   font-style: italic;
+  margin-left: auto;
 }
 
 /* Timezone selector */
