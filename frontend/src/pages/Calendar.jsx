@@ -1,61 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
-import { api } from '../api';
-import CalendarAvailability, { getWeekStart } from '../components/CalendarAvailability';
+import { useState } from 'react';
+import CalendarAvailability from '../components/CalendarAvailability';
+import useCalendarComparison from '../hooks/useCalendarComparison';
 
 export default function Calendar() {
-  const [clients, setClients] = useState([]);
-  const [providers, setProviders] = useState([]);
+  const cal = useCalendarComparison();
+  const {
+    clients, providers,
+    selectedClientId, setSelectedClientId,
+    selectedProviderId, setSelectedProviderId,
+    clientData, providerData,
+    sideBySide, setSideBySide,
+    sharedNav, handleClientChange, handleProviderChange,
+    hasBoth,
+  } = cal;
+
   const [modalOpen, setModalOpen] = useState(false);
-  // Which side initiated the modal
-  const [initSide, setInitSide] = useState(null); // 'client' | 'provider'
-  const [selectedClientId, setSelectedClientId] = useState('');
-  const [selectedProviderId, setSelectedProviderId] = useState('');
-  const [clientData, setClientData] = useState(null);
-  const [providerData, setProviderData] = useState(null);
-  const [sideBySide, setSideBySide] = useState(true);
-
-  // Shared calendar navigation
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
-  const [monthDate, setMonthDate] = useState(() => new Date());
-  const [viewMode, setViewMode] = useState('week');
-  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-  const sharedNav = {
-    weekStart, onWeekStartChange: setWeekStart,
-    selectedDate, onSelectedDateChange: setSelectedDate,
-    monthDate, onMonthDateChange: setMonthDate,
-    viewMode, onViewModeChange: setViewMode,
-    timezone, onTimezoneChange: setTimezone,
-  };
-
-  useEffect(() => {
-    api.getClients().then(setClients).catch(() => {});
-    api.getProviders().then(setProviders).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!selectedClientId) { setClientData(null); return; }
-    api.getClient(selectedClientId).then(data => {
-      setClientData(data);
-      // Default to client timezone when only client is selected (no provider)
-      if (data.timezone && !selectedProviderId) setTimezone(data.timezone);
-    }).catch(() => setClientData(null));
-  }, [selectedClientId]);
-
-  useEffect(() => {
-    if (!selectedProviderId) {
-      setProviderData(null);
-      // Fall back to client timezone when provider is deselected
-      if (clientData?.timezone) setTimezone(clientData.timezone);
-      return;
-    }
-    api.getProvider(selectedProviderId).then(data => {
-      setProviderData(data);
-      // Provider timezone takes priority when both are selected
-      if (data.timezone) setTimezone(data.timezone);
-    }).catch(() => setProviderData(null));
-  }, [selectedProviderId]);
+  const [initSide, setInitSide] = useState(null);
 
   const openClient = (id) => {
     setSelectedClientId(id);
@@ -73,36 +33,8 @@ export default function Calendar() {
 
   const closeModal = () => {
     setModalOpen(false);
-    setSelectedClientId('');
-    setSelectedProviderId('');
-    setClientData(null);
-    setProviderData(null);
+    cal.reset();
   };
-
-  const handleClientChange = (newAvail) => {
-    api.updateClient(selectedClientId, { ...clientData, availability: newAvail })
-      .then(() => api.getClient(selectedClientId).then(setClientData));
-  };
-
-  const handleProviderChange = (newAvail) => {
-    api.updateProvider(selectedProviderId, { ...providerData, availability: newAvail })
-      .then(() => api.getProvider(selectedProviderId).then(setProviderData));
-  };
-
-  const overlaps = useMemo(() => {
-    if (!clientData?.availability?.length || !providerData?.availability?.length) return [];
-    const results = [];
-    for (const cs of clientData.availability) {
-      for (const ps of providerData.availability) {
-        if (cs.date !== ps.date) continue;
-        const overlapStart = cs.start_time > ps.start_time ? cs.start_time : ps.start_time;
-        const overlapEnd = cs.end_time < ps.end_time ? cs.end_time : ps.end_time;
-        if (overlapStart < overlapEnd)
-          results.push({ date: cs.date, start_time: overlapStart, end_time: overlapEnd });
-      }
-    }
-    return results;
-  }, [clientData, providerData]);
 
   const [clientSearch, setClientSearch] = useState('');
   const [providerSearch, setProviderSearch] = useState('');
@@ -112,8 +44,6 @@ export default function Calendar() {
     p.name.toLowerCase().includes(providerSearch.toLowerCase()) ||
     (p.specialty && p.specialty.toLowerCase().includes(providerSearch.toLowerCase()))
   );
-
-  const hasBoth = !!clientData && !!providerData;
 
   return (
     <div>
@@ -200,7 +130,7 @@ export default function Calendar() {
                 )}
               </div>
 
-              {/* Name legend — always in same position */}
+              {/* Name legend */}
               <div className="cal-merged-legend">
                 {clientData && <span className="cal-merged-legend-item cal-merged-legend-client">■ 👤 {clientData.name}</span>}
                 {providerData && <span className="cal-merged-legend-item cal-merged-legend-provider">■ 🏥 {providerData.name}</span>}
@@ -208,7 +138,6 @@ export default function Calendar() {
 
               {hasBoth ? (
                 sideBySide ? (
-                  /* Side-by-side grids */
                   <div className="cal-modal-dual">
                     <CalendarAvailability {...sharedNav} hideGrid availability={[]} onChange={() => {}} />
                     <div className="cal-modal-grids">
@@ -221,7 +150,6 @@ export default function Calendar() {
                     </div>
                   </div>
                 ) : (
-                  /* Merged view: both on one calendar */
                   <CalendarAvailability
                     {...sharedNav}
                     availability={clientData.availability || []}
@@ -231,7 +159,6 @@ export default function Calendar() {
                   />
                 )
               ) : (
-                /* Single calendar */
                 <CalendarAvailability
                   {...sharedNav}
                   availability={(clientData || providerData)?.availability || []}
