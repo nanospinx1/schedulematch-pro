@@ -89,6 +89,7 @@ export default function CalendarAvailability({ availability, onChange }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(() => new Date());
   const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const [pickerHoverWeek, setPickerHoverWeek] = useState(-1);
   const pickerRef = useRef(null);
 
   // Close picker on outside click
@@ -302,6 +303,7 @@ export default function CalendarAvailability({ availability, onChange }) {
                     const weekStartStr = toDateStr(getWeekStart(week[0]));
                     const currentWeekStr = toDateStr(weekStart);
                     const isSelectedWeek = weekStartStr === currentWeekStr;
+                    const isHoverWeek = wi === pickerHoverWeek;
                     return week.map((day, di) => {
                       const isCurrentMonth = day.getMonth() === pickerMonth.getMonth();
                       const dayStr = toDateStr(day);
@@ -309,8 +311,10 @@ export default function CalendarAvailability({ availability, onChange }) {
                       return (
                         <div
                           key={`${wi}-${di}`}
-                          className={`cal-picker-mini-day${!isCurrentMonth ? ' cal-picker-dim' : ''}${isToday ? ' cal-picker-today' : ''}${isSelectedWeek ? ' cal-picker-sel-week' : ''}`}
+                          className={`cal-picker-mini-day${!isCurrentMonth ? ' cal-picker-dim' : ''}${isToday ? ' cal-picker-today' : ''}${isSelectedWeek ? ' cal-picker-sel-week' : ''}${isHoverWeek && !isSelectedWeek ? ' cal-picker-hover-week' : ''}`}
                           onClick={() => handlePickerWeekClick(week)}
+                          onMouseEnter={() => setPickerHoverWeek(wi)}
+                          onMouseLeave={() => setPickerHoverWeek(-1)}
                         >
                           {day.getDate()}
                         </div>

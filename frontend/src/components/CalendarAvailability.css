@@ -208,6 +208,10 @@
 }
 
 .cal-picker-mini-day:hover {
+  background: none;
+}
+
+.cal-picker-hover-week {
   background: var(--gray-100);
 }
 
