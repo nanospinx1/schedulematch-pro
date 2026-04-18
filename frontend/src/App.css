@@ -564,6 +564,8 @@ tr:hover td { background: var(--gray-50); }
 .cal-modal-grids .cal-container {
   margin-top: 0;
 }
+
+.cal-modal-dual {
   display: flex;
   flex-direction: column;
   gap: 0;
